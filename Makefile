@@ -12,6 +12,7 @@ clean:
 	del *.REL
 	del *.PRN
 	del *.BIN
+	del *.NoiCtx
 
 all: init1.rkl init2.BIN
 
