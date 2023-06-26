@@ -1,0 +1,57 @@
+	MACRO-80 3.44	09-Dec-81	PAGE	1
+
+
+                                	.8080 
+  0000'   21 0030'              	LXI H,BEGPRO+1 ; g`ohq`r| b hl `dpeq noep`md` 
+                                		     ; jnl`md{ out dk naeqoewemh hmjpelemr` 
+                                		     ; m`whm`el q out 00 
+  0003'   3E C4                 	mvi	a,0c4h 
+  0005'   D3 FF                 	out	-1 
+  0007'   06 FE                 	MVI B,0FEH    ; B - qwerwhj, @  mnlep khmhh b{anp` 
+  0009'   3E 00                 	MVI A,0 
+  000B'   CD 002F'              	CALL BEGPRO  ; `dpeq` 00007FFF  ngs 
+                                 
+  000E'   3E A4                 	mvi	a,0a4h 
+  0010'   D3 FF                 	out	-1 
+                                 
+  0012'   36 00                 	MVI	M,0 
+  0014'   06 FE                 	MVI B,0FEH    ; B - qwerwhj, @  mnlep khmhh b{anp` 
+  0016'   3E 00                 	MVI A,0 
+  0018'   CD 002F'              	CALL BEGPRO  ; `dpeq` 00007FFF  ngs 
+                                 
+  001B'   3E 00                 	mvi	a,0;6 
+  001D'   D3 CC                 	out	0cch 
+                                 
+  001F'   3E 80                 	mvi	a,80h 
+  0021'   D3 FF                 	out	-1 
+  0023'   21 CC03               	lxi	h,0cc03h 
+  0026'   36 36                 	mvi	m,36h 
+  0028'   36 76                 	mvi	m,76h 
+  002A'   36 B6                 	mvi	m,0b6h 
+                                 
+  002C'   C3 F800               	jmp	0f800h 
+                                 
+                                 
+  002F'                         BEGPRO: 
+  002F'   D3 00                 	OUT 0 
+  0031'   34                    	INR M 
+  0032'   05                    	DCR B 
+  0033'   C8                    	RZ 
+  0034'   C3 002F'              	JMP BEGPRO 
+                                 
+                                	end 
+	MACRO-80 3.44	09-Dec-81	PAGE	S
+
+
+Macros:
+
+Symbols:
+002F'	BEGPRO          
+
+
+
+No Fatal error(s)
+
+
+00h 
+                           
