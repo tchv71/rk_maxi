@@ -14,11 +14,12 @@ clean:
 	del *.BIN
 	del *.NoiCtx
 
-all: init1.rkl init2.BIN
+all: init1.rkl init2.BIN RomCopy.BIN
 
 init1.rkl: init1.BIN
 
 .BIN.rkl:
+	../makerk/Release/makerk.exe 100 $< $@
 
 
 .REL.BIN:
