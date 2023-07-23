@@ -2,18 +2,20 @@
 ; дешифратора - Апогей БК
 	.phase 0100h
 
-	MVI	A,0C4h
-	OUT	-1 ; Turn on external device programming mode (for in/out commands)
+
+	LXI	SP,100H
+	IN	-1	; Обязательное чтение перед записью системного регистра
+	MVI	A,0C0h
+	OUT	-1	; Turn on external device programming mode (for in/out commands)
 	LXI	H,BEGPRO+1
-	LXI	B,0FE00h
+	LXI	B,0000h
 	MVI	A,15
 	CALL	READR
-	CALL	LOOP01 ; Turn on working mode
 
 	MVI	A,80H ; Start page
 	LXI	D,MAP
 	CALL	PROG_DC
-	MVI	A,0AAH
+	MVI	A,10
 	OUT	-1
 
 	LXI	H,180H
@@ -32,14 +34,11 @@ CP001:
 	MVI	A,0f0h
 	LXI	D,MAP2
 	CALL	PROG_DC
+	MVI	A,1Ah
+	OUT	-1
 
-	;MVI	A,0AAH
-	;OUT	-1
-	MVI	A,0BAH
-	OUT	-1
-	MVI	A,9AH   ; Включить рабочий режим
-	OUT	-1
-	MVI	A,80h
+	IN	-1
+	MVI	A,80H   ; Включить рабочий режим
 	OUT	-1
 
 	JMP 0F800h  ; Перейти к программированию контроллеров рк
@@ -54,30 +53,23 @@ BEGPRO:
 
 PROG_DC:
 	PUSH	PSW
-	MVI A,0AAH;  Включить режим репрограммирования
-	OUT -1;     внутренних устройств
+	IN	-1	; Обязательное чтение перед записью системного регистра
+	MVI	A,0A0H	;  Включить режим репрограммирования
+	OUT	-1	;  внутренних устройств
 	POP	PSW
-	LXI H,BEGPRO+1 ; Записать в hl адрес операнда
-		     ; команды out для обеспечения инкремента
-		     ; начинаем с out 80H
+	LXI H,BEGPRO+1	; Записать в hl адрес операнда
+			; команды out для обеспечения инкремента
 	MOV	M,A
 LOOP:
 	LDAX	D
 	ORA	A
-	JZ	LOOP01
+	RZ
 	MOV	B,A
 	INX	D
 	LDAX	D
 	INX	D
 	CALL	BEGPRO
 	JMP	LOOP
-LOOP01:
-	;MVI A,8AH   ; Включить рабочий режим
-	;OUT -1
-	;MVI A,80H   ; Записать в системный регистр-начальные
-	;OUT -1      ; значения: турборежим выключен, нулевая
-                    ; страница дополнительного озу
-	RET
 
 MAP:	DB	60h,10 ; // E000
 	DB	12, 10 ; // E000-EBFF
