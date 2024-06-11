@@ -31,5 +31,17 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="Makefile" />
+    <None Include="apogee.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="port.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="MemTest.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="MEM2A.ASM">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

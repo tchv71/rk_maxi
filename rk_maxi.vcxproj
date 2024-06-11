@@ -79,10 +79,14 @@ make all</NMakeReBuildCommandLine>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="apogee.asm" />
     <None Include="init.asm" />
     <None Include="init1.asm" />
     <None Include="init2.asm" />
     <None Include="Makefile" />
+    <None Include="MEM2A.ASM" />
+    <None Include="MemTest.asm" />
+    <None Include="port.asm" />
     <None Include="RomCopy.asm" />
     <None Include="ROMCOPY.BIN" />
   </ItemGroup>
