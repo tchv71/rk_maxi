@@ -43,5 +43,17 @@
     <None Include="MEM2A.ASM">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="SDDMA.ASM">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="boot.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="sdbios.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="DmaIo.asm">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

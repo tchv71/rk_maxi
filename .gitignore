@@ -366,3 +366,5 @@ FodyWeavers.xsd
 *.REL
 *.SYM
 *.NoiCtx
+/SDDMA.ASM
+/SDDMA.rkl
