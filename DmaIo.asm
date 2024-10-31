@@ -5,12 +5,20 @@ RECV_MODE       EQU 1         ; Режим приема
 ; Установка режима приема или передачи
 
 SwitchRecv:
+     PUSH   H
+     PUSH   D
+     PUSH   B
      LDA    Mode
      ORA    A ; CPI SEND_MODE
      JNZ    RM01
-     PUSH   H
+
      LXI    H,-BUF
+     XCHG
+     LHLD   BUF_PTR
      DAD    D
+     MOV    A,H
+     ORA    L
+     JZ     RM01
      XCHG
      LXI    H,BUF-2
      MOV    M,E
@@ -19,8 +27,8 @@ SwitchRecv:
      DCX    H
      XCHG
      LXI    B,8002h
-     POP    H
-     RST    3; CALL   SET_DMA
+     ;RST    3
+     CALL   SET_DMAW
      LDAX   D
      INX    D
      MOV    C,A
@@ -28,29 +36,49 @@ SwitchRecv:
      INX    D
      ORI    80H
      MOV    B,A
-     RST    3; CALL   SET_DMA
+     ;RST    3
+     CALL   SET_DMAW
 RM01:
      MVI   A, RECV_MODE
      JMP   SetMode
 SwitchSend:
-     MVI   A,SEND_MODE
+     PUSH  H
+     PUSH  D
+     PUSH  B
+     XRA   A ; MVI   A,SEND_MODE
 SetMode:
-     LXI   D, BUF
      STA   Mode
-     MVI   C,0
+     XRA    A
+     STA   BUF_SIZE
+     LXI   H, BUF
+     SHLD  BUF_PTR
+     ;MVI   C,0
+     POP   B
+     POP   D
+     POP   H
      RET
 
 GetByte:
-     MOV   A,C
+     LDA   BUF_SIZE
      ORA   A
      CZ    DmaReadVariable
-     DCR   C
+     DCR   A
+     STA   BUF_SIZE
+     PUSH  H
+     LHLD  BUF_PTR
+     MOV   A,M
+     INX   H
+     SHLD  BUF_PTR
+     POP   H
      RET
 
+; Read variable length DMA record - the first packet is 2 bytes length,
+; the second - data with previosly transmitted length
 DmaReadVariable:
      LXI   B,4002H
      LXI   D,BUF
-     RST   3; CALL  SET_DMA
+     ;RST   3
+     CALL  SET_DMAW
      LDAX  D
      INX   D
      MOV   C,A
@@ -58,10 +86,32 @@ DmaReadVariable:
      INX   D
      ORI   40H
      MOV   B,A
+     CALL  SET_DMAW
+     MOV   A,C
+     STA   BUF_SIZE
+     XCHG
+     SHLD  BUF_PTR
+     XCHG
+     RET
+
+; Set DMA with waiting of the end of transfer
+SET_DMAW:
+     CALL  SET_DMA
+WAIT_DMA:
+     LDA   0C608H
+     ANI   2
+     JZ    WAIT_DMA
+     RET
+; Program DMA controller
+
+; DE - start address
+; BC - packet length with MSB:
+;   10 - read cycle (transfer from memory to device)
+;   01 - write cycle (thansfer from device to memory)
 SET_DMA:
      PUSH  H
      LXI   H,0C608H
-     MVI   M,80h;0F4h
+     MVI   M,0F4h
      MVI   L,2
      MOV   M,E
      MOV   M,D
@@ -71,12 +121,12 @@ SET_DMA:
      MOV   M,B
      INX   B
      MVI   L,8
-     MVI   M,0F6h 
+     MVI   M,0F6h
      POP   H
-     ;RET
-WAIT_DMA:
-    LDA 0C608H
-    ANI 2
-    JZ WAIT_DMA
-    RET
+     RET
+
+
 Mode: db RECV_MODE
+BUF_PTR:    ds  2
+BUF_SIZE:   ds  1
+BUF:        ds  32

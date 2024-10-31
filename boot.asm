@@ -7,14 +7,14 @@ MONITOR         EQU 0F86Ch    ; Адрес собрата в Монитор
 
 ; Коды передаваемые микроконтроллером
 
-ERR_START       EQU 040h ; МК переключен в режим приема команд
-ERR_WAIT        EQU 041h ; МК выполняет команду
-ERR_OK_DISK     EQU 042h ; Накопитель исправен, микроконтроллер готов к приему команды
-ERR_OK          EQU 043h ; Команда выполнена
-ERR_OK_READ     EQU 044h ; МК готов передать следующий блок данных
-ERR_OK_ADDR     EQU 047h ; МК готов передать адрес загрузки
-ERR_OK_BLOCK    EQU 04Fh 
-BUF             EQU 0D8h
+STA_START       EQU 040h ; МК переключен в режим приема команд
+STA_WAIT        EQU 041h ; МК выполняет команду
+STA_OK_DISK     EQU 042h ; Накопитель исправен, микроконтроллер готов к приему команды
+STA_OK          EQU 043h ; Команда выполнена
+STA_OK_READ     EQU 044h ; МК готов передать следующий блок данных
+STA_OK_ADDR     EQU 047h ; МК готов передать адрес загрузки
+STA_OK_BLOCK    EQU 04Fh 
+;BUF             EQU 0D8h
 ;----------------------------------------------------------------------------
 ; Точка входа
 
@@ -33,48 +33,50 @@ Boot:
 ; Отправка и прием байта (в HL должен находится USER_PORT)
 
 Rst1:
-     CALL GetByte
-     ; Прием байта
-     LDAX  D
-     RZ
-     INX   D
-     RET
+     JMP GetByte
      NOP
-
+     NOP
+     NOP
+     NOP
+     NOP
 ;----------------------------------------------------------------------------
 ; Ожидание готовности МК
 
 Rst2:
 WaitForReady:
      Rst   1
-     CPI   ERR_WAIT
+     CPI   STA_WAIT
      JZ    WaitForReady
      RET
      NOP
 Rst3:
-     JMP   SET_DMA
+     JMP   SET_DMAW
 
 SEND_BYTE MACRO
-    STAX   D
-    INX    D
+    PUSH   H
+    LHLD   BUF_PTR
+    MOV    M,A
+    INX    H
+    SHLD   BUF_PTR
+    POP    H
     ENDM
 
 ;----------------------------------------------------------------------------
 
      ; Начало любой команды (это шина адреса)
 Boot2:
-     ; Если есть синхронизация, то контроллер ответит ERR_START по шине данных
+     ; Если есть синхронизация, то контроллер ответит STA_START по шине данных
      Rst   1
-     CPI   ERR_START
+     CPI   STA_START
      JNZ   RetrySync
 
      ; Инициализация флешки
      Rst   2
-     CPI   ERR_OK_DISK
+     CPI   STA_OK_DISK
      JNZ   RetrySync
 
      ; Режим передачи     
-     Rst   1     
+     ;Rst   1     
      CALL  SwitchSend
 
      ; Код команды BOOT
@@ -86,7 +88,7 @@ Boot2:
 
      ; Это ответ команды BOOT
      Rst   2
-     CPI   ERR_OK_ADDR
+     CPI   STA_OK_ADDR
      JNZ   RetrySync
      
      ; Адрес загрузки в DE
@@ -102,11 +104,11 @@ Boot2:
 RecvLoop:
      ; Все части загружены, можно запускать файл.
      Rst   2
-     CPI   ERR_OK_READ
+     CPI   STA_OK_READ
      JZ    Rst1
 
-     ; Если МК прочитал блок без ошибок, будет передан ERR_OK_BLOCK
-     CPI   ERR_OK_BLOCK
+     ; Если МК прочитал блок без ошибок, будет передан STA_OK_BLOCK
+     CPI   STA_OK_BLOCK
      JNZ   PrintError
 
      ; Размер блока данных
@@ -148,5 +150,6 @@ PrintError:
      JMP   MONITOR
 
      include DmaIo.asm
+
      End
 

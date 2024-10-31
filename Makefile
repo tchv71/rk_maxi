@@ -25,7 +25,7 @@ boot.REL: DmaIo.asm boot.asm
 
 SDDMA.BIN: SDDMA.REL
 
-sdbios.asm: DmaIo.asm
+sdbios.REL: sdbios.asm DmaIo.asm
 
 sdbios.BIN: sdbios.REL
 
@@ -57,4 +57,4 @@ boot.rkl: boot.BIN
 	../makerk/Release/makerk.exe 0 $< $@
 
 sdbios.rkl: sdbios.bin
-	../makerk/Release/makerk.exe 0 $< $@
+	../makerk/Release/makerk.exe 8000 $< $@
