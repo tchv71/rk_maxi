@@ -55,5 +55,8 @@
     <None Include="DmaIo.asm">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="write.asm">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

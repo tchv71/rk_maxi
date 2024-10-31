@@ -93,6 +93,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="ROMCOPY.BIN" />
     <None Include="sdbios.asm" />
     <None Include="SDDMA.ASM" />
+    <None Include="write.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

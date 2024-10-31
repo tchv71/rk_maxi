@@ -12,10 +12,10 @@ INIT_STACK      EQU  0D800h
 STA_START       EQU 040h ; МК переключен в режим приема команд
 STA_WAIT        EQU 041h ; МК выполняет команду
 STA_OK_DISK     EQU 042h ; Накопитель исправен, микроконтроллер готов к приему команды
-STA_OK_CMD          EQU 043h ; Команда выполнена
+STA_OK_CMD      EQU 043h ; Команда выполнена
 STA_OK_READ     EQU 044h ; МК готов передать следующий блок данных
-STA_OK_ENTRY    EQU 045h
-STA_OK_WRITE	EQU 046h
+STA_OK_ENTRY    EQU 045h ; MK готов передать запись о файле
+STA_OK_WRITE	EQU 046h ; MK ждет следующий блок для записи
 STA_OK_ADDR     EQU 047h ; МК готов передать адрес загрузки
 STA_OK_BLOCK    EQU 04Fh 
 
@@ -145,6 +145,13 @@ BE01:
      MOV    L, A
      XTHL
      RET
+
+; Режимы открытия файла
+O_OPEN   EQU 0
+O_CREATE EQU 1
+O_MKDIR  EQU 2
+O_DELETE EQU 100
+O_SWAP   EQU 101
 
 ;----------------------------------------------------------------------------
 ; Переходы JmpTbl не обязаны быть в пределах одной страницы
@@ -282,7 +289,8 @@ CmdWrite:
 
      ; Теперь адрес в HL
      XCHG
-
+     MOV    B,H
+     MOV    C,L
 CmdWriteFile2:
      ; Результат выполнения команды
      CALL	SwitchRecvAndWait
@@ -549,6 +557,7 @@ SendBlock:
 
 ;----------------------------------------------------------------------------
 ; Принять DE байт по адресу BC
+; Увеличить BC на размер блока
 ; Портим A
 
 RecvBlock:
@@ -642,7 +651,6 @@ Recv:
      PUSH   H
      PUSH   D
      PUSH   B
-     LHLD   BUF_PTR
      LDA    BUF_SIZE
      ORA    A
      CZ     DmaReadVariable

@@ -15,7 +15,7 @@ clean:
 	del *.BIN
 	del *.NoiCtx
 
-all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl
+all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl
 
 init1.rkl: init1.BIN
 
@@ -28,6 +28,10 @@ SDDMA.BIN: SDDMA.REL
 sdbios.REL: sdbios.asm DmaIo.asm
 
 sdbios.BIN: sdbios.REL
+
+write.REL: write.asm
+
+write.BIN: write.rel
 
 port.rkl: port.BIN
 	../makerk/Release/makerk.exe 100 $< $@
@@ -58,3 +62,6 @@ boot.rkl: boot.BIN
 
 sdbios.rkl: sdbios.bin
 	../makerk/Release/makerk.exe 8000 $< $@
+
+write.rkl: write.bin
+	../makerk/Release/makerk.exe 100 $< $@
