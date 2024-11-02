@@ -2,7 +2,7 @@
 ; (c) 09-10-2014 vinxru (aleksey.f.morozov@gmail.com)
 ; (c) 24-10-2024 tchv aka Dmitry Tsvetkov (tchv71@mail.ru)
 
-     .phase 8000h;0D600h-683-9Bh-33h ; Последний байт кода должен быть 0D5FFh
+     .phase 0D600h-683-9Bh-33h+20 ; Последний байт кода должен быть 0D5FFh
                        
 ;----------------------------------------------------------------------------
 
@@ -192,7 +192,7 @@ CmdFindLoop:
      CPI	STA_OK_CMD
      JZ		Ret0
      CPI	STA_OK_ENTRY
-     JNZ	EndCommand
+     RNZ;	EndCommand
 
      ; Прием блока данных
      LXI	D, 20	; Длина блока
@@ -223,7 +223,7 @@ CmdOpenDelete:
      CALL	SwitchRecvAndWait
      CPI	STA_OK_CMD
      JZ		Ret0
-     JMP	EndCommand
+     RET;JMP	EndCommand
      
 ;----------------------------------------------------------------------------
 ; B-режим, DE:HL-позиция / A-код ошибки, DE:HL-позиция
@@ -245,7 +245,7 @@ CmdSeekGetSize:
      ; Ждем пока МК сообразит. МК должен ответить кодом STA_OK_CMD
      CALL	SwitchRecvAndWait
      CPI	STA_OK_CMD
-     JNZ	EndCommand
+     RNZ;	EndCommand
 
      ; Длина файла
      CALL	RecvWord
@@ -274,7 +274,33 @@ CmdRead:
      CALL	SwitchRecv
 
      ; Прием блока. На входе адрес BC, принятая длина в HL
-     JMP	RecvBuf
+;----------------------------------------------------------------------------
+; Загрузка данных по адресу BC. 
+; На выходе HL сколько загрузили
+; Портим A
+; Если загружено без ошибок, на выходе Z=1
+
+RecvBuf:
+     LXI	H, 0
+RecvBuf0:   
+     ; Подождать
+     CALL	WaitForReady
+     CPI	STA_OK_READ
+     JZ		Ret0		; на выходе Z (нет ошибки)
+     SUI    STA_OK_BLOCK
+     RNZ;	EndCommand	; на выходе NZ (ошибка)
+
+     ; Размер загруженных данных в DE
+     CALL	RecvWord
+
+     ; В HL общий размер
+     DAD D
+
+     ; Принять DE байт по адресу BC
+     CALL	RecvBlock
+
+     JMP	RecvBuf0
+
 
 ;----------------------------------------------------------------------------
 ; HL-размер, DE-адрес / A-код ошибки
@@ -297,7 +323,7 @@ CmdWriteFile2:
      CPI  	STA_OK_CMD
      JZ  	Ret0
      CPI  	STA_OK_WRITE
-     JNZ	EndCommand
+     RNZ;	EndCommand
 
      ; Размер блока, который может принять МК в DE
      CALL	RecvWord
@@ -324,7 +350,7 @@ CmdMove:
      ; Ждем пока МК сообразит
      CALL	SwitchRecvAndWait
      CPI	STA_OK_WRITE
-     JNZ	EndCommand
+     RNZ;	EndCommand
 
      ; Переключаемся в режим передачи
      CALL	SwitchSend
@@ -338,7 +364,7 @@ WaitEnd:
      CALL	SwitchRecvAndWait
      CPI	STA_OK_CMD
      JZ		Ret0
-     JMP	EndCommand
+     RET;    JMP	EndCommand
 
 ;----------------------------------------------------------------------------
 ; HL-имя файла, DE-командная строка / A-код ошибки
@@ -357,7 +383,7 @@ CmdExec:
      ; МК должен ответить кодом STA_OK_ADDR
      CALL	SwitchRecvAndWait
      CPI	STA_OK_ADDR
-     JNZ	EndCommand
+     RNZ;	EndCommand
 
      ; Сохраняем имя файла (HL-строка)
      PUSH	D
@@ -408,7 +434,6 @@ CmdExec:
 ;----------------------------------------------------------------------------
 ; Начало любой команды. 
 ; A - код команды
-
 StartCommand:
      ; Первым этапом происходит синхронизация с контроллером
      ; Принимается 256 попыток, в каждой из которых пропускается 256+ байт
@@ -416,51 +441,18 @@ StartCommand:
      PUSH	B
      PUSH	H
      PUSH	PSW
-     MVI	C, 0
 
 StartCommand1:
      ; Режим передачи (освобождаем шину) и инициализируем HL
      CALL       SwitchRecv
 
-     ; Начало любой команды (это шина адреса)
-     ;LXI	H, USER_PORT+1
-     ;MVI        M, 0
-     ;MVI        M, 44h
-     ;MVI        M, 40h
-     ;MVI        M, 0h
-
      ; Если есть синхронизация, то контроллер ответит STA_START
      CALL	Recv
      CPI	STA_START
-     JZ		StartCommand2
-
-     ; Пауза. И за одно пропускаем 256 байт (в сумме будет 
-     ; пропущено 64 Кб данных, максимальный размер пакета)
-     PUSH	B
-     MVI	C, 0
-StartCommand3:
-     CALL	Recv
-     DCR	C
-     JNZ	StartCommand3
-     POP	B
-        
-     ; Попытки
-     DCR	C
-     JNZ	StartCommand1    
-
-     ; Код ошибки
-     MVI	A, STA_START
-StartCommandErr2:
-     POP	B ; Прошлое значение PSW
-     POP	H ; Прошлое значение H
-     POP	B ; Прошлое значение B     
-     POP	B ; Выходим через функцию.
-     RET
-
+     JNZ	StartCommandErr2
 ;----------------------------------------------------------------------------
 ; Синхронизация с контроллером есть. Контроллер должен ответить STA_OK_DISK
 
-StartCommand2:
      ; Ответ         	
      CALL	WaitForReady
      CPI	STA_OK_DISK
@@ -475,6 +467,13 @@ StartCommand2:
 
      ; Передаем код команды
      JMP        Send
+StartCommandErr2:
+     POP	B ; Прошлое значение PSW
+     POP	H ; Прошлое значение H
+     POP	B ; Прошлое значение B     
+     POP	B ; Выходим через функцию.
+     RET
+
 
 ;----------------------------------------------------------------------------
 ; Переключиться в режим передачи
@@ -491,10 +490,7 @@ Ret0:
 ; Окончание команды с ошибкой в A 
 ; и дополнительный такт, что бы МК отпустил шину
 
-EndCommand:
-     ;PUSH	PSW
-     ;CALL	Recv
-     ;POP	PSW
+;EndCommand:
      RET
 
 ;----------------------------------------------------------------------------
@@ -585,38 +581,11 @@ RecvSendBlock:
      XRA    A
      RET
 
-RecvBlock2:
-    JMP    DmaReadVariable
+;RecvBlock2:
+;    JMP    DmaReadVariable
 
 ;----------------------------------------------------------------------------
-; Загрузка данных по адресу BC. 
-; На выходе HL сколько загрузили
-; Портим A
-; Если загружено без ошибок, на выходе Z=1
-
-RecvBuf:
-     LXI	H, 0
-RecvBuf0:   
-     ; Подождать
-     CALL	WaitForReady
-     CPI	STA_OK_READ
-     JZ		Ret0		; на выходе Z (нет ошибки)
-     SUI    STA_OK_BLOCK
-     JNZ	EndCommand	; на выходе NZ (ошибка)
-
-     ; Размер загруженных данных в DE
-     CALL	RecvWord
-
-     ; В HL общий размер
-     DAD D
-
-     ; Принять DE байт по адресу BC
-     CALL	RecvBlock
-
-     JMP	RecvBuf0
-
-;----------------------------------------------------------------------------
-; Скопироваьт строку с ограничением 256 символов (включая терминатор)
+; Скопировать строку с ограничением 256 символов (включая терминатор)
 
 strcpy255:
      MVI  B, 255

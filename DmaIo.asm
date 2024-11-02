@@ -58,20 +58,6 @@ SetMode:
      POP   H
      RET
 
-GetByte:
-     LDA   BUF_SIZE
-     ORA   A
-     CZ    DmaReadVariable
-     DCR   A
-     STA   BUF_SIZE
-     PUSH  H
-     LHLD  BUF_PTR
-     MOV   A,M
-     INX   H
-     SHLD  BUF_PTR
-     POP   H
-     RET
-
 ; Read variable length DMA record - the first packet is 2 bytes length,
 ; the second - data with previosly transmitted length
 DmaReadVariable:

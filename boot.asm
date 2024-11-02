@@ -19,26 +19,26 @@ STA_OK_BLOCK    EQU 04Fh
 ; Точка входа
 
 Entry:
-     ; Первым этапом происходит синхронизация с контроллером
-     ; 256 попыток. Для этого в регистр C заносится 0
-     MVI    H,0
-
 Boot:
      ; Режим передачи (освобождаем шину) и инициализируем HL
-     CALL  SwitchRecv
+     ;CALL  SwitchRecv
+     CALL   Boot2 ; Если вернется - произошла ошибка
+;----------------------------------------------------------------------------
+; Повторные попыки
 
-     JMP   Boot2
-
+     jmp    0F800H
+     NOP
+     NOP
 ;----------------------------------------------------------------------------
 ; Отправка и прием байта (в HL должен находится USER_PORT)
 
 Rst1:
-     JMP GetByte
-     NOP
-     NOP
-     NOP
-     NOP
-     NOP
+     PUSH  D
+     PUSH  B
+     CALL  Recv
+     POP   B
+     POP   D
+     RET
 ;----------------------------------------------------------------------------
 ; Ожидание готовности МК
 
@@ -50,106 +50,142 @@ WaitForReady:
      RET
      NOP
 Rst3:
-     JMP   SET_DMAW
+; Program DMA controller
 
-SEND_BYTE MACRO
-    PUSH   H
-    LHLD   BUF_PTR
-    MOV    M,A
-    INX    H
-    SHLD   BUF_PTR
-    POP    H
-    ENDM
+; DE - start address
+; BC - packet length with MSB:
+;   10 - read cycle (transfer from memory to device)
+;   01 - write cycle (thansfer from device to memory)
+SET_DMAW:
+     PUSH  H
+     LXI   H,0C608H
+     MVI   M,0F4h
+     MVI   L,2
+     MOV   M,E
+     MOV   M,D
+     INR   L
+     DCX   B
+     MOV   M,C
+     MOV   M,B
+     INX   B
+     MVI   L,8
+     MVI   M,0F6h
+     POP   H
+WAIT_DMA:
+     LDA   0C608H
+     ANI   2
+     JZ    WAIT_DMA
+     RET
 
 ;----------------------------------------------------------------------------
-
      ; Начало любой команды (это шина адреса)
 Boot2:
+     MVI    H,1
      ; Если есть синхронизация, то контроллер ответит STA_START по шине данных
      Rst   1
      CPI   STA_START
-     JNZ   RetrySync
+     RNZ; JNZ   RetrySync
 
      ; Инициализация флешки
      Rst   2
      CPI   STA_OK_DISK
-     JNZ   RetrySync
+     RNZ; JNZ   RetrySync
 
      ; Режим передачи     
      ;Rst   1     
-     CALL  SwitchSend
+     ;CALL  SwitchSend
 
      ; Код команды BOOT
      XRA   A
-     SEND_BYTE
+Send:
+     LXI   D,OUTCHAR
+     STAX  D
+     DCX   D
+     DCX   D
+     ;MVI   A,1
+     ;@out  SD
+     LXI   B,8002H
+     ;CALL  SET_DMAW
+     RST   3
+     INX   D
+     INX   D
+     DCR   C
+     RST   3
+     ;ORA   A
 
      ; Режим приема
-     CALL  SwitchRecv
+     ;CALL  SwitchRecv
 
      ; Это ответ команды BOOT
      Rst   2
      CPI   STA_OK_ADDR
-     JNZ   RetrySync
+     RNZ; JNZ   RetrySync
      
      ; Адрес загрузки в DE
      Rst   1
-     MOV   L, A
+     MOV   E, A
      Rst   1
-     MOV   H, A
+     MOV   D, A
 
      ; Сохраняем в стек адрес запуска
-     PUSH   H
+     PUSH   D
 
      ; Файл может быть разбит на несколько частей
 RecvLoop:
      ; Все части загружены, можно запускать файл.
      Rst   2
      CPI   STA_OK_READ
-     JZ    Rst1
+     RZ;    Rst1
 
      ; Если МК прочитал блок без ошибок, будет передан STA_OK_BLOCK
      CPI   STA_OK_BLOCK
-     JNZ   PrintError
+     RNZ; JNZ   PrintError
 
      ; Размер блока данных
      Rst   1
-     MOV   B, A
+     MOV   C, A
      Rst   1
+     MOV   B, A
      PUSH  B
-     PUSH  D
-     MOV   C,B
      ORI   40h
      MOV   B, A
 
      ; Принимаем блок данных
-     XCHG
      RST   3; CALL  SET_DMA
      XCHG
-     MOV   A,B
-     ANI   3Fh
-     MOV   B,A
-     DAD   B
-     POP   D
      POP   B
+     DAD   B
+     XCHG
      JMP   RecvLoop
 
-;----------------------------------------------------------------------------
-; Повторные попыки
-
-RetrySync:
-     ; Попытки
-     ;DCR   H
-     ;JNZ   Boot
-     jmp    0F800H
 
 ;----------------------------------------------------------------------------
 ; Вывод кода ошибки
 
-PrintError:
-     CALL  0F815h
-     JMP   MONITOR
+;PrintError:
+;     CALL  0F815h
+;     JMP   MONITOR
 
-     include DmaIo.asm
+
+Recv:
+     LXI   D,OUTCHAR
+     LXI   B,4001H
+     DCR   H
+     JNZ   Recv01
+     INR   C
+     RST   3
+     DCR   C
+     LDAX  D
+     MOV   H,A
+Recv01:
+     ;CALL  SET_DMAW
+     RST   3
+     LDAX  D
+     ;ORA   A ; Clear C-flag
+     RET
+
+     DW 1
+OUTCHAR: DS 2
 
      End
 
