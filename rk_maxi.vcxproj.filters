@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
+    <Filter Include="Source Files\9918">
+      <UniqueIdentifier>{6e272e40-f561-4e6b-8498-a4b4182fadbb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="init.asm">
@@ -56,6 +59,30 @@
       <Filter>Source Files</Filter>
     </None>
     <None Include="write.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="9918test.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="sprite.asm">
+      <Filter>Source Files\9918</Filter>
+    </None>
+    <None Include="tms.asm">
+      <Filter>Source Files\9918</Filter>
+    </None>
+    <None Include="utility.asm">
+      <Filter>Source Files\9918</Filter>
+    </None>
+    <None Include="z180.asm">
+      <Filter>Source Files\9918</Filter>
+    </None>
+    <None Include="9918.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="9918font.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="9918txt.asm">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>

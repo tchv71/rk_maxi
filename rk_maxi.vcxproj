@@ -79,6 +79,10 @@ make all</NMakeReBuildCommandLine>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="9918.asm" />
+    <None Include="9918font.asm" />
+    <None Include="9918test.asm" />
+    <None Include="9918txt.asm" />
     <None Include="apogee.asm" />
     <None Include="boot.asm" />
     <None Include="DmaIo.asm" />
@@ -93,7 +97,11 @@ make all</NMakeReBuildCommandLine>
     <None Include="ROMCOPY.BIN" />
     <None Include="sdbios.asm" />
     <None Include="SDDMA.ASM" />
+    <None Include="sprite.asm" />
+    <None Include="tms.asm" />
+    <None Include="utility.asm" />
     <None Include="write.asm" />
+    <None Include="z180.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -4,6 +4,7 @@
      .phase 0 
 
 MONITOR         EQU 0F86Ch    ; Адрес собрата в Монитор
+VT37            EQU 1
 
 ; Коды передаваемые микроконтроллером
 
@@ -58,6 +59,7 @@ Rst3:
 ;   01 - write cycle (thansfer from device to memory)
 SET_DMAW:
      PUSH  H
+IFNDEF VT37
      LXI   H,0C608H
      MVI   M,0F4h
      MVI   L,2
@@ -70,11 +72,37 @@ SET_DMAW:
      INX   B
      MVI   L,8
      MVI   M,0F6h
-     POP   H
+ELSE
+     LXI   H,0C60CH
+     MOV   M,A
+     MVI   L,0AH
+     MVI   M,5 ; Stop channel 1
+
+     MVI   L,2
+     MOV   M,E
+     MOV   M,D
+     DCX   B
+     INX   H
+     MOV   M,C
+     MOV   M,B
+     INX   B
+
+     MVI   L,0Bh
+     ;ORI   1
+     MOV   M,A
+IF 1
+     MVI   L,8
+     MVI   M,20h
+ENDIF
+     MVI   L,0Ah
+     MVI   M,1 ; Start channel 1
+     MVI   L,8
+ENDIF
 WAIT_DMA:
-     LDA   0C608H
+     MOV   A,M
      ANI   2
      JZ    WAIT_DMA
+     POP   H
      RET
 
 ;----------------------------------------------------------------------------
@@ -104,12 +132,20 @@ Send:
      DCX   D
      ;MVI   A,1
      ;@out  SD
+IFNDEF VT37
      LXI   B,8002H
+ELSE
+     LXI   B,2
+     MVI   A,8+1
+ENDIF
      ;CALL  SET_DMAW
      RST   3
      INX   D
      INX   D
      DCR   C
+IFDEF VT37
+     MVI   A,8+1
+ENDIF
      RST   3
      ;ORA   A
 
@@ -146,14 +182,16 @@ RecvLoop:
      MOV   C, A
      Rst   1
      MOV   B, A
+IFNDEF VT37
      PUSH  B
      ORI   40h
      MOV   B, A
-
+ELSE
+     MVI   A,4+1
+ENDIF
      ; Принимаем блок данных
      RST   3; CALL  SET_DMA
      XCHG
-     POP   B
      DAD   B
      XCHG
      JMP   RecvLoop
@@ -169,7 +207,12 @@ RecvLoop:
 
 Recv:
      LXI   D,OUTCHAR
+IFNDEF VT37
      LXI   B,4001H
+ELSE
+     LXI   B,1
+     MVI   A,4+1
+ENDIF
      DCR   H
      JNZ   Recv01
      INR   C
@@ -177,6 +220,9 @@ Recv:
      DCR   C
      LDAX  D
      MOV   H,A
+IFDEF VT37
+     MVI   A,4+1
+ENDIF
 Recv01:
      ;CALL  SET_DMAW
      RST   3

@@ -2,7 +2,7 @@
 ; (c) 09-10-2014 vinxru (aleksey.f.morozov@gmail.com)
 ; (c) 24-10-2024 tchv aka Dmitry Tsvetkov (tchv71@mail.ru)
 
-     .phase 0D600h-683-9Bh-33h+20 ; Последний байт кода должен быть 0D5FFh
+     .phase 8800h;0D600h-683-9Bh-33h+20 ; Последний байт кода должен быть 0D5FFh
                        
 ;----------------------------------------------------------------------------
 
@@ -287,7 +287,7 @@ RecvBuf0:
      CALL	WaitForReady
      CPI	STA_OK_READ
      JZ		Ret0		; на выходе Z (нет ошибки)
-     SUI    STA_OK_BLOCK
+     SUI        STA_OK_BLOCK
      RNZ;	EndCommand	; на выходе NZ (ошибка)
 
      ; Размер загруженных данных в DE
@@ -562,7 +562,7 @@ RecvSendBlock:
      PUSH   H
      PUSH   D
 
-     PUSH	B
+     PUSH   B
      PUSH   D
      POP    B
      POP    D
@@ -578,7 +578,6 @@ RecvSendBlock:
      MOV    B,H
      POP    D
      POP    H
-     XRA    A
      RET
 
 ;RecvBlock2:

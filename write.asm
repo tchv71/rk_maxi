@@ -15,21 +15,51 @@ ERR_INVALID_COMMAND EQU 12 ; Не используется файловой системой, резерв
 
 ERR_ALREADY_OPENED  EQU 13 ; Файл уже открыт (fs_swap)
 
+SDBIOS  EQU 88CAh
+
     .phase 100H
-    LXI     B,80CAh
+    LXI     B,SDBIOS
     PUSH    B
-    CALL    OPEN
+    CALL    OPENR
+    JMP     READ
+    
     LXI     H,800H
     LXI     D,0F800h
     MVI     A,5
     RET
 
-OPEN:
+READ:
+    ;MVI     B,100
+    ;LXI     H,0
+    ;MOV     D,H
+    ;MOV     E,L
+    ;MVI     A,3 ; CmdSeekGetSize
+    ;CALL    SDBIOS
+
+    ;MOV     L,E
+    ;MOV     H,D
+    LXI     H,800H
+    LXI     D,4800H
+    MVI     A,4 ; CmdRead
+    RET
+
+
+OPENW:
     PUSH    B
     MVI     D,1 ; O_CREATE
     LXI     H,R
     MVI     A,2
     RET
 
+OPENR:
+    PUSH    B
+    MVI     D,0 ; O_OPEN
+    LXI     H,FONT
+    MVI     A,2
+    RET
+
+
 R:  DB      "TAPE/R.BIN",0
+
+FONT:	DB	'CPM/8X16ENG.FNT',0
     end

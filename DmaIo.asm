@@ -1,8 +1,8 @@
 SEND_MODE       EQU 0         ; Режим передачи
 RECV_MODE       EQU 1         ; Режим приема
-
 ;----------------------------------------------------------------------------
 ; Установка режима приема или передачи
+CHANNEL0 EQU 1
 
 SwitchRecv:
      PUSH   H
@@ -85,7 +85,11 @@ SET_DMAW:
      CALL  SET_DMA
 WAIT_DMA:
      LDA   0C608H
+IFDEF CHANNEL0
+     ANI   1
+ELSE
      ANI   2
+ENDIF
      JZ    WAIT_DMA
      RET
 ; Program DMA controller
@@ -96,7 +100,11 @@ WAIT_DMA:
 ;   01 - write cycle (thansfer from device to memory)
 SET_DMA:
      PUSH  H
-     LXI   H,0C608H
+     LXI   H,0C60Fh
+     MOV   A,M
+     INR   A
+     JZ    VT37
+     MVI   L,8
      MVI   M,0F4h
      MVI   L,2
      MOV   M,E
@@ -108,6 +116,50 @@ SET_DMA:
      INX   B
      MVI   L,8
      MVI   M,0F6h
+     POP   H
+     RET
+
+VT37:
+     MOV   A,B
+     PUSH  PSW
+     ANI   3Fh
+     MOV   B,A
+     MVI   L,0Ch
+     MOV   M,A
+     MVI   L,0Ah
+IFDEF CHANNEL0
+     MVI   M,4 ; Stop channel 0
+     MVI   L,0
+ELSE
+     MVI   M,5 ; Stop channel 1
+     MVI   L,2
+ENDIF
+     MOV   M,E
+     MOV   M,D
+     INR   L
+     DCX   B
+     MOV   M,C
+     MOV   M,B
+     INX   B
+     MVI   L,0Bh
+     POP   PSW
+     ANI   0C0H
+     RRC
+     RRC
+     RRC
+     RRC
+IFNDEF CHANNEL0
+     ORI   1
+ENDIF
+     MOV   M,A
+     MVI   L,8
+     MVI   M,20h
+     MVI   L,0Ah
+IFDEF CHANNEL0
+     MVI   M,0
+ELSE
+     MVI   M,1 ; Start channel 1
+ENDIF
      POP   H
      RET
 
