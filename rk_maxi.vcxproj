@@ -99,6 +99,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="SDDMA.ASM" />
     <None Include="sprite.asm" />
     <None Include="tms.asm" />
+    <None Include="tmsfont.asm" />
     <None Include="utility.asm" />
     <None Include="write.asm" />
     <None Include="z180.asm" />

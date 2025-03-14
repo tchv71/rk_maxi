@@ -103,9 +103,11 @@ T_Fill:
 	PUSH	B
 	MOV	B,D
 	MOV	C,E
+	MOV	E,A
 	CALL	T_SetAddrWrite
 	POP	B
 @loop40:
+	MOV	A,E
 	OUT	VDP
 	DCX	B
 	MOV	A,B

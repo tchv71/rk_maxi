@@ -85,5 +85,8 @@
     <None Include="9918txt.asm">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="tmsfont.asm">
+      <Filter>Source Files\9918</Filter>
+    </None>
   </ItemGroup>
 </Project>
