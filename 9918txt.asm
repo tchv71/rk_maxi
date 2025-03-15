@@ -61,16 +61,18 @@ T_InitialiseText80:
 
 	; set up name table address (register = address / 400H)
 	MVI	B, T_REG_NAME_TABLE
-	MVI	C, T_T80_VRAM_NAME_ADDRESS / 400h
-	CALL	T_WriteRegValue
-
-	MVI	B, T_REG_1
-	MVI	C, T_R1_RAM_16K or T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INT_ENABLE
+	MVI	C, (T_T80_VRAM_NAME_ADDRESS / 400h) AND 7Ch OR 3 
 	CALL	T_WriteRegValue
 
 	MVI	B, T_REG_0
 	MVI	C, T_R0_EXT_VDP_DISABLE OR T_R0_MODE_TEXT80
-	JMP	T_WriteRegValue
+	CALL	T_WriteRegValue
+
+	MVI	B, T_REG_1
+	MVI	C, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INT_ENABLE
+	CALL	T_WriteRegValue
+
+	RET
 
 include 9918.asm
 tmsFont:
