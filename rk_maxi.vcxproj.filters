@@ -73,9 +73,6 @@
     <None Include="utility.asm">
       <Filter>Source Files\9918</Filter>
     </None>
-    <None Include="z180.asm">
-      <Filter>Source Files\9918</Filter>
-    </None>
     <None Include="9918.asm">
       <Filter>Source Files</Filter>
     </None>
@@ -87,6 +84,9 @@
     </None>
     <None Include="tmsfont.asm">
       <Filter>Source Files\9918</Filter>
+    </None>
+    <None Include="z180.asm">
+      <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
 </Project>

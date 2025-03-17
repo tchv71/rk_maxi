@@ -97,8 +97,6 @@ T_Reset:
 	;JMP	T_Fill ; fallthrough
 
 
-TmsWait	EQU 10
-
 T_Fill:
 	PUSH	B
 	MOV	B,D
@@ -117,18 +115,52 @@ T_Fill:
 
 T_WriteBytes:
 	MOV	A,M
-	;CALL	T_WriteData
 	OUT	VDP
-;	MVI	B,TmsWait
-;	.Z80
-;@loop20:
-;	djnz	@loop20
-;	.8080
 	INX	H
 	DCX	D
 	MOV	A,D
 	ORA	E
 	JNZ	T_WriteBytes
+	RET
+
+T_ShAddrWriteBytes:
+	PUSH	B
+	MOV	B,D
+	MOV	C,E
+	CALL	T_SetAddrWrite
+	POP	B
+
+T_ShortWriteBytes:
+	MOV	A,M
+	OUT	VDP
+	INX	H
+	DCR	B
+	JNZ	T_ShortWriteBytes
+	RET
+
+T_ReadBytes:
+	IN	VDP
+	MOV	M,A
+	INX	H
+	DCX	D
+	MOV	A,D
+	ORA	E
+	JNZ	T_ReadBytes
+	RET
+
+T_ShAddrReadBytes:
+	PUSH	B
+	MOV	B,D
+	MOV	C,E
+	CALL	T_SetAddrRead
+	POP	B
+
+T_ShortReadBytes:
+	IN	VDP
+	MOV	M,A
+	INX	H
+	DCR	B
+	JNZ	T_ShortReadBytes
 	RET
 
 T_ReadStatus:
@@ -140,9 +172,11 @@ T_ReadStatus:
 T_WriteRegValue:
 	;CALL	T_WriteAddr
 	MOV	A,C
+	DI
 	OUT	VDP+1
 	MOV	A,B
 	ORI	80H
+	;EI
 	OUT	VDP+1
 	RET
 
@@ -151,23 +185,17 @@ T_SetAddrWrite:
 	ORI	40h
 	MOV	B,A
 T_SetAddrRead:
-	CALL	T_WriteAddr
-	MOV	C,B
-T_WriteAddr:
-; C - data
-writeTo9918:
 	MOV	A,C
+	DI
+	OUT	VDP+1
+	MOV	A,B
+	;EI
 	OUT	VDP+1
 	RET
 
 T_WriteData:
 	MOV	A,C
 	OUT	VDP
-;	MVI	B,TmsWait
-;	.Z80
-;@loop21:
-;	djnz	@loop21
-;	.8080
 	RET
 
 ; set the address to place text at X/Y coordinate
@@ -206,17 +234,41 @@ T_StrOut:
 	JMP	T_StrOut
 
 
-@SYSREG	MACRO	VAL
-	IN	-1
-	MVI	A,VAL
-	OUT	-1
-	ENDM
+T_InitialiseText80:
+	;CALL	T_Reset
 
-setVdpPort:
-	DI
-	@SYSREG	0C0h ; Turn on external device programming mode (for in/out commands)
-	MVI	A,14
-	OUT	VDP
-	OUT	VDP+1
-	@SYSREG	80h
-	RET
+	LXI	B, T_T80_VRAM_PATT_ADDRESS ; load font from address in bc
+	CALL	T_SetAddrWrite
+
+	LXI	H, tmsFont
+	LXI	D, tmsFontEnd - tmsFont ; tmsFontBytes
+	CALL	T_WriteBytes
+	; fallthrough to TmsInitNonBitmap
+
+; non-bitmap color and pattern table configuration
+	MVI	B, T_REG_COLOR_TABLE
+	MVI	C, T_T80_VRAM_COLOR_ADDRESS / 40h
+	CALL	T_WriteRegValue
+
+	; set up pattern table address (register = address / 800H)
+	MVI	B, T_REG_PATTERN_TABLE
+	MVI	C, T_T80_VRAM_PATT_ADDRESS / 800h
+	CALL	T_WriteRegValue
+
+	; set up name table address (register = address / 400H)
+	MVI	B, T_REG_NAME_TABLE
+	MVI	C, (T_T80_VRAM_NAME_ADDRESS / 400h) AND 7Ch OR 3 
+	CALL	T_WriteRegValue
+
+	MVI	B, T_REG_0
+	MVI	C, T_R0_EXT_VDP_DISABLE OR T_R0_MODE_TEXT80
+	CALL	T_WriteRegValue
+
+	MVI	B, T_REG_1
+	MVI	C, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INT_ENABLE
+	CALL	T_WriteRegValue
+
+	MVI	B, T_REG_FG_BG_COLOR
+	MVI	C, T_DK_BLUE OR (T_WHITE SHL 4)
+	JMP	T_WriteRegValue
+

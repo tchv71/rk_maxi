@@ -1,6 +1,16 @@
 ; Tms9918 test program
+@SYSREG	MACRO	VAL
+	IN	-1
+	MVI	A,VAL
+	OUT	-1
+	ENDM
 
 	LXI	SP,100h
+	.Z80
+	im	1
+	.8080
+	MVI	A,0C9h
+	STA	38h
 
 	CALL	setVdpPort
 	CALL	T_ReadStatus
@@ -106,6 +116,15 @@
 	.8080
 	EI
 	JMP	$;0f86ch
+
+setVdpPort:
+	DI
+	@SYSREG	0C0h ; Turn on external device programming mode (for in/out commands)
+	MVI	A,14
+	OUT	VDP
+	OUT	VDP+1
+	@SYSREG	80h
+	RET
 
 
 frameNumber:	DW	0
@@ -239,7 +258,7 @@ include 9918.asm
 
 T_InitialiseGfxII:
 	MVI	B, T_REG_0
-	MVI	C, T_R0_EXT_VDP_DISABLE OR T_R0_MODE_TEXT80
+	MVI	C, T_R0_EXT_VDP_DISABLE OR T_R0_MODE_GR_II
 	CALL	T_WriteRegValue
 
 	MVI	B, T_REG_1

@@ -1,11 +1,20 @@
 ; Tms9918 test program
+@SYSREG	MACRO	VAL
+	IN	-1
+	MVI	A,VAL
+	OUT	-1
+	ENDM
 
 	LXI	SP,100h
 
 	CALL	setVdpPort
+L01:
 	CALL	T_ReadStatus
+	;OUT	VDP
+	;JMP	L01
 
 	;LXI	H,tmsFont
+	CALL	T_Reset
 	CALL	T_InitialiseText80
 
 	MVI	B, T_REG_FG_BG_COLOR
@@ -32,47 +41,75 @@
 	DCR	B
 	JNZ	@l02
 
+	;CALL	DELLIN
+	LXI	B,50
+	CALL	T_SetAddrRead
+	IN	VDP
+	PUSH	PSW
+	LXI	B,0
+	CALL	T_SetAddrWrite
+	POP	PSW
+	;MVI	A,'2'
+	OUT	VDP
 	JMP	$
+
+setVdpPort:
+	DI
+	@SYSREG	0C0h ; Turn on external device programming mode (for in/out commands)
+	MVI	A,14
+	OUT	VDP
+	OUT	VDP+1
+	@SYSREG	80h
+	RET
+
+ENDSCR	EQU	80*24
+PHYS_W	EQU	80
+
+DELLIN:	PUSH	H
+	LXI	H,0;LHLD	STRADR
+DL01:
+	MOV	D,H
+	MOV	E,L
+	CALL	NXT_S
+	PUSH	H
+	PUSH	D
+
+	PUSH	D
+	XCHG
+	LXI	H,STRBUF
+	MVI	B,PHYS_W
+	PUSH	H
+	CALL	T_ShAddrReadBytes
+	POP	H
+	POP	D
+	MVI	B, PHYS_W
+	CALL	T_ShAddrWriteBytes
+	POP	D
+	POP	H
+	MOV	A,H
+	CPI	high(ENDSCR)
+	JNZ	DL01
+	MOV	A,L
+	CPI	low(ENDSCR)
+	JNZ	DL01
+	XRA	A
+	LXI	B,PHYS_W
+	CALL	T_Fill
+
+	POP	H
+	RET
+
+NXT_S:	PUSH	B
+	LXI	B,PHYS_W
+	DAD	B
+	POP	B
+	RET
+
+STRBUF:	DS	80
 
 str:	Db	"hello, world",0
 str1:	Db	"         1",0
 str2:	Db	"1234567890",0
-
-T_InitialiseText80:
-	CALL	T_Reset
-
-	LXI	B, T_T80_VRAM_PATT_ADDRESS; + 32 * 8 ; load font from address in bc
-	CALL	T_SetAddrWrite
-
-	LXI	H, tmsFont
-	LXI	D, tmsFontEnd - tmsFont ; tmsFontBytes
-	CALL	T_WriteBytes
-	; fallthrough to TmsInitNonBitmap
-
-; non-bitmap color and pattern table configuration
-	MVI	B, T_REG_COLOR_TABLE
-	MVI	C, T_T80_VRAM_COLOR_ADDRESS / 40h
-	CALL	T_WriteRegValue
-
-	; set up pattern table address (register = address / 800H)
-	MVI	B, T_REG_PATTERN_TABLE
-	MVI	C, T_T80_VRAM_PATT_ADDRESS / 800h
-	CALL	T_WriteRegValue
-
-	; set up name table address (register = address / 400H)
-	MVI	B, T_REG_NAME_TABLE
-	MVI	C, (T_T80_VRAM_NAME_ADDRESS / 400h) AND 7Ch OR 3 
-	CALL	T_WriteRegValue
-
-	MVI	B, T_REG_0
-	MVI	C, T_R0_EXT_VDP_DISABLE OR T_R0_MODE_TEXT80
-	CALL	T_WriteRegValue
-
-	MVI	B, T_REG_1
-	MVI	C, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INT_ENABLE
-	CALL	T_WriteRegValue
-
-	RET
 
 include 9918.asm
 tmsFont:
