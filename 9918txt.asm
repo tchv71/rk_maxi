@@ -1,4 +1,6 @@
 ; Tms9918 test program
+VDP_LINE	EQU	14
+
 @SYSREG	MACRO	VAL
 	IN	-1
 	MVI	A,VAL
@@ -6,10 +8,16 @@
 	ENDM
 
 	LXI	SP,100h
+	.Z80
+	im	1
+	.8080
+	MVI	A,0C9h
+	STA	38h
 
 	CALL	setVdpPort
 L01:
 	CALL	T_ReadStatus
+	CALL	0F815h
 	;OUT	VDP
 	;JMP	L01
 
@@ -23,9 +31,6 @@ L01:
 
 	LXI	H,0
 	CALL	T_TextPos
-
-	;LXI	H,str
-	;CALL	T_StrOut
 
 	MVI	B,8
 @l01:	LXI	H,str1
@@ -41,22 +46,22 @@ L01:
 	DCR	B
 	JNZ	@l02
 
-	;CALL	DELLIN
-	LXI	B,50
-	CALL	T_SetAddrRead
-	IN	VDP
-	PUSH	PSW
-	LXI	B,0
-	CALL	T_SetAddrWrite
-	POP	PSW
-	;MVI	A,'2'
-	OUT	VDP
+	CALL	DELLIN
+	;LXI	B,50h
+	;CALL	T_SetAddrRead
+	;IN	VDP
+	;PUSH	PSW
+	;LXI	B,0
+	;CALL	T_SetAddrWrite
+	;POP	PSW
+	;OUT	VDP
+	;CALL	0F815h
 	JMP	$
 
 setVdpPort:
 	DI
 	@SYSREG	0C0h ; Turn on external device programming mode (for in/out commands)
-	MVI	A,14
+	MVI	A, VDP_LINE
 	OUT	VDP
 	OUT	VDP+1
 	@SYSREG	80h

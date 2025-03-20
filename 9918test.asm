@@ -1,4 +1,6 @@
 ; Tms9918 test program
+VDP_LINE	EQU	14
+
 @SYSREG	MACRO	VAL
 	IN	-1
 	MVI	A,VAL
@@ -120,7 +122,7 @@
 setVdpPort:
 	DI
 	@SYSREG	0C0h ; Turn on external device programming mode (for in/out commands)
-	MVI	A,14
+	MVI	A,VDP_LINE
 	OUT	VDP
 	OUT	VDP+1
 	@SYSREG	80h
