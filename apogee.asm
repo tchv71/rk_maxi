@@ -2,20 +2,22 @@
 ; дешифратора - Апогей БК
 	.phase 0100h
 
+RAM	equ	13
+RAM2	equ	3
 
 	LXI	SP,100H
 	IN	-1	; Обязательное чтение перед записью системного регистра
 	MVI	A,0C0h
 	OUT	-1	; Turn on external device programming mode (for in/out commands)
-	LXI	H,BEGPRO+1
-	LXI	B,0000h
-	MVI	A,15
-	CALL	READR
+	;LXI	H,BEGPRO+1
+	;LXI	B,0000h
+	;MVI	A,15
+	;CALL	READR
 
 	MVI	A,80H ; Start page
 	LXI	D,MAP
 	CALL	PROG_DC
-	MVI	A,10
+	MVI	A,RAM
 	OUT	-1
 
 	LXI	H,180H
@@ -34,7 +36,7 @@ CP001:
 	MVI	A,0f0h
 	LXI	D,MAP2
 	CALL	PROG_DC
-	MVI	A,1Ah
+	MVI	A,RAM2
 	OUT	-1
 
 	IN	-1
@@ -71,12 +73,15 @@ LOOP:
 	CALL	BEGPRO
 	JMP	LOOP
 
-MAP:	DB	60h,10 ; // E000
-	DB	12, 10 ; // E000-EBFF
-	DB	1,6, 1,0, 1,1 ,1,2
-	DB	15,10,0
+MAP:	DB	60h,RAM	; 0000h - DFFFh
+	DB	12, RAM ; E000h - EBFFh
+	DB	1,6	; EС00h - EСFFh	Генератор звука КР580ВИ53
+	DB	1,0	; ED00h - EDFFh	Интерфейс клавиатуры и магнитофона КР580ВВ55
+	DB	1,1	; EE00h - EEFFh	Интерфейс пользователя КР580ВВ55
+	DB	1,2	; EF00h - EFFFh	Контроллер дисплея КР580ВГ75
+	DB	15,RAM,0
 
-MAP2:	DB	8,3,7,1Ah,0
+MAP2:	DB	8,3,7,RAM2,0
 	
 	END
 

@@ -114,7 +114,23 @@ LOOP:
 	INX	D
 	CALL	PROG_PAGE
 	JMP	LOOP
-
+; Коды дешифратора:
+; 0	- 0C200h - ВВ55 - 1
+; 1	- 0C400h - ВВ55 - 2
+; 2	- 0C000h - ВГ75
+; 3	-	Memory R/O
+; 4	-	ROM
+; 5	-	Memory < 32K
+; 6	- 0CC00h - ВИ53 - 1
+; 7	- 0C600h - ВТ57
+; 8	- 0C800h - ВИ53 - 2
+; 9	- 0C100h - SD_CNTR - контроллер SD-карточки
+;10	-	ЗГ RAM
+;11	- 0CE00h - ТМ9 (Palmira Control Byte)
+;12	- 0C300h - 
+;13	-	Memory >= 32K
+;14	- 0CA00h - VDP TMS9918A
+;15	- 0F700h - RK60K Ports
 MAP:	DB	1,5,3fh,5,40h,15h,40h,13
 	DB	1,2  ; 0C000h - ВГ75
 	DB	1,9  ; 0C100h - SD_CNTR - контроллер SD-карточки
@@ -122,9 +138,9 @@ MAP:	DB	1,5,3fh,5,40h,15h,40h,13
 	DB	2,1  ; 0C400h - ВВ55 - 2
 	DB	2,7  ; 0C600h - ВТ57
 	DB	2,8  ; 0C800h - ВИ53 - 2
-	DB	2,14 ; 0CA00h - ВВ55 - 3
+	DB	2,14 ; 0CA00h - VDP TMS9918A
 	DB	2,6  ; 0CC00h - ВИ53 - 1
-	DB	2,11 ; 0CE00h - ТМ9
+	DB	2,11 ; 0CE00h - ТМ9  (Palmira Control Byte)
 	DB	8,13+10h,8,10,30,4,0
 APOGEE:
 	DB	"APOGEE.RKL"

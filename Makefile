@@ -15,7 +15,7 @@ clean:
 	del *.BIN
 	del *.NoiCtx
 
-all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl
+all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl rk60k.rkl
 
 init1.rkl: init1.BIN
 
@@ -43,8 +43,14 @@ port.rkl: port.BIN
 .REL.BIN:
 	$(M80PATH)/L80 /P:100,$<,$@/N/Y/E
 
-apogee.rkl: apogee.BIN
+apogee.rkl: apogee.BIN apogey.rom
 	copy /B apogee.BIN+apogey.rom apogee.BIN
+	../makerk/Release/makerk.exe 100 $< $@
+
+rk60k2.BIN: rk60k.rom rk60k.BIN
+	copy /B rk60k.BIN+rk60k.rom+8X16eng.FNT rk60k2.BIN
+
+rk60k.rkl: rk60k2.BIN
 	../makerk/Release/makerk.exe 100 $< $@
 
 send: apogee.rkl

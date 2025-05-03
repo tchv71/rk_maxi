@@ -93,6 +93,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="MEM2A.ASM" />
     <None Include="MemTest.asm" />
     <None Include="port.asm" />
+    <None Include="rk60k.asm" />
     <None Include="RomCopy.asm" />
     <None Include="ROMCOPY.BIN" />
     <None Include="sdbios.asm" />
