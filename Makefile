@@ -43,8 +43,10 @@ port.rkl: port.BIN
 .REL.BIN:
 	$(M80PATH)/L80 /P:100,$<,$@/N/Y/E
 
-apogee.rkl: apogee.BIN apogey.rom
-	copy /B apogee.BIN+apogey.rom apogee.BIN
+apogee2.BIN: apogey.rom apogee.BIN
+	copy /B apogee.BIN+apogey.rom apogee2.BIN
+
+apogee.rkl: apogee2.BIN
 	../makerk/Release/makerk.exe 100 $< $@
 
 rk60k2.BIN: rk60k.rom rk60k.BIN

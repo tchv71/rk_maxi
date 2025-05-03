@@ -2,7 +2,7 @@
 ; дешифратора - Апогей БК
 	.phase 0100h
 
-RAM	equ	13
+RAM	equ	0dh
 RAM2	equ	3
 
 	LXI	SP,100H
@@ -73,15 +73,15 @@ LOOP:
 	CALL	BEGPRO
 	JMP	LOOP
 
-MAP:	DB	60h,RAM	; 0000h - DFFFh
-	DB	12, RAM ; E000h - EBFFh
+MAP:	DB	40h,RAM	; 0000h - DFFFh
+	DB	20h+12, RAM+10h ; E000h - EBFFh
 	DB	1,6	; EС00h - EСFFh	Генератор звука КР580ВИ53
 	DB	1,0	; ED00h - EDFFh	Интерфейс клавиатуры и магнитофона КР580ВВ55
 	DB	1,1	; EE00h - EEFFh	Интерфейс пользователя КР580ВВ55
 	DB	1,2	; EF00h - EFFFh	Контроллер дисплея КР580ВГ75
-	DB	15,RAM,0
+	DB	16,RAM+10h,0
 
-MAP2:	DB	8,3,7,RAM2,0
+MAP2:	DB	16,RAM2+10h,0
 	
 	END
 
