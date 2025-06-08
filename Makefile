@@ -69,7 +69,7 @@ boot.rkl: boot.BIN
 	../makerk/Release/makerk.exe 0 $< $@
 
 sdbios.rkl: sdbios.bin
-	../makerk/Release/makerk.exe 8800 $< $@
+	../makerk/Release/makerk.exe D280 $< $@
 
 write.rkl: write.bin
 	../makerk/Release/makerk.exe 100 $< $@

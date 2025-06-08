@@ -1,7 +1,6 @@
-SEND_MODE       EQU 0         ; Режим передачи
-RECV_MODE       EQU 1         ; Режим приема
+SEND_MODE       EQU 0         ; Send mode
+RECV_MODE       EQU 1         ; Receive mode
 ;----------------------------------------------------------------------------
-; Установка режима приема или передачи
 CHANNEL0 EQU 1
 
 SwitchRecv:
@@ -106,7 +105,11 @@ SET_DMA:
      JZ    VT37
      MVI   L,8
      MVI   M,0F4h
+IFDEF CHANNEL0
+     MVI   L,0
+ELSE
      MVI   L,2
+ENDIF
      MOV   M,E
      MOV   M,D
      INR   L
@@ -115,7 +118,11 @@ SET_DMA:
      MOV   M,B
      INX   B
      MVI   L,8
+IFDEF CHANNEL0
+     MVI   M,0F5H
+ELSE
      MVI   M,0F6h
+ENDIF
      POP   H
      RET
 
