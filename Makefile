@@ -15,13 +15,13 @@ clean:
 	del *.BIN
 	del *.NoiCtx
 
-all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl rk60k.rkl
+all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl rk60k.rkl bootRom.rkl
 
 init1.rkl: init1.BIN
 
 boot.BIN: boot.REL
 
-boot.REL: DmaIo.asm boot.asm
+boot.REL: boot.asm
 
 SDDMA.BIN: SDDMA.REL
 
@@ -97,3 +97,10 @@ sprite.rkl: sprite.bin
 
 9918txt.rkl: 9918txt.bin
 	../makerk/Release/makerk.exe 100 $< $@
+
+bootRom.BIN: bootRom.REL
+
+bootRom.REL: bootRom.asm
+
+bootRom.rkl: bootRom.BIN
+	../makerk/Release/makerk.exe 8600 $< $@

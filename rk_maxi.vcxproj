@@ -85,6 +85,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="9918txt.asm" />
     <None Include="apogee.asm" />
     <None Include="boot.asm" />
+    <None Include="bootRom.asm" />
     <None Include="DmaIo.asm" />
     <None Include="init.asm" />
     <None Include="init1.asm" />

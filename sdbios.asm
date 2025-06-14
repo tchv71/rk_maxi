@@ -6,29 +6,29 @@
                        
 ;----------------------------------------------------------------------------
 
-INIT_VIDEO      EQU  0F82DH
-INIT_STACK      EQU  0D800h
+INIT_VIDEO	EQU  0F82DH
+INIT_STACK	EQU  0D800h
 
 ; MC codes
-STA_START       EQU 040h ; MC switched to command receive mode
-STA_WAIT        EQU 041h ; MC is executing command
-STA_OK_DISK     EQU 042h ; The drive is working, MC is ready to receive command
-STA_OK_CMD      EQU 043h ; Command is executed
-STA_OK_READ     EQU 044h ; MC is ready to transfer next data block
-STA_OK_ENTRY    EQU 045h ; MC is ready to transfer file record
+STA_START	EQU 040h ; MC switched to command receive mode
+STA_WAIT	EQU 041h ; MC is executing command
+STA_OK_DISK	EQU 042h ; The drive is working, MC is ready to receive command
+STA_OK_CMD	EQU 043h ; Command is executed
+STA_OK_READ	EQU 044h ; MC is ready to transfer next data block
+STA_OK_ENTRY	EQU 045h ; MC is ready to transfer file record
 STA_OK_WRITE	EQU 046h ; MC is waiting for next data block (for write)
-STA_OK_ADDR     EQU 047h ; MC is ready to send loading address
-STA_OK_BLOCK    EQU 04Fh 
+STA_OK_ADDR	EQU 047h ; MC is ready to send loading address
+STA_OK_BLOCK	EQU 04Fh 
 
-VER_BUF         EQU  BUF
-
+VER_BUF		EQU  BUF
+     JMP	Entry
 ;----------------------------------------------------------------------------
 ; RK file header
 
-     ;.db ($+2)>>8, ($+2)&0FFh
+     db (BiosEntry) AND 0FFh, (BiosEntry) SHR 8 
      
 ;----------------------------------------------------------------------------
-	      
+
 Entry:
      ; Set free memory border
      ;LXI	H, SELF_NAME
@@ -74,7 +74,7 @@ PrintVer:
           
      ; Вывод версии железа
      XRA	A
-     STA    BUF_SIZE
+     STA	BUF_SIZE
      STA	VER_BUF+17+2
      LXI	H, VER_BUF+1+2
      JMP 	0F818h
@@ -90,15 +90,15 @@ aShellRk:       db "BOOT/SHELL.RK",0
 
 ; Код ниже будет затерт ком строкой и собственым именем
 
-SELF_NAME    EQU $-512 ; путь (буфер 256 байт)
-CMD_LINE     EQU $-256 ; команданая строка 256 байт
+SELF_NAME	EQU $-512 ; путь (буфер 256 байт)
+CMD_LINE	EQU $-256 ; команданая строка 256 байт
 
 ;----------------------------------------------------------------------------
 ; SD BIOS resident part
 ;----------------------------------------------------------------------------
 
-aError:    db "SD ERROR"
-aEmpty:    db 0
+aError:		db "SD ERROR"
+aEmpty:		db 0
 
 ;----------------------------------------------------------------------------
 ; Here we restore what been damaged during failure
@@ -110,7 +110,7 @@ Error:
      ; Save error code
      PUSH	PSW
 
-     CALL       CLS_INIT_VDP
+     CALL	CLS_INIT_VDP
 
 Error2:
      ; Output text "SD ERROR"
@@ -130,22 +130,22 @@ CLS_INIT_VDP:
      MVI	C, 1Fh
      CALL	0F809h     
      ; And then reset video controller
-     JMP        INIT_VIDEO
+     JMP	INIT_VIDEO
 ;----------------------------------------------------------------------------
 
 BiosEntry:
-     PUSH   H
+     PUSH	H
      LXI	H, JmpTbl
-     ADD    A
+     ADD	A
      ADD	L
      MOV	L, A
-     JNC    BE01
-     INR    H
+     JNC	BE01
+     INR	H
 BE01:
-     MOV    A,M
-     INX    H
-     MOV    H, M
-     MOV    L, A
+     MOV	A,M
+     INX	H
+     MOV	H, M
+     MOV	L, A
      XTHL
      RET
 
@@ -288,7 +288,7 @@ RecvBuf0:
      CALL	WaitForReady
      CPI	STA_OK_READ
      JZ		Ret0		; Z on exit (no error)
-     SUI        STA_OK_BLOCK
+     SUI	STA_OK_BLOCK
      RNZ;	EndCommand	; NZ on exit (error)
 
      ; Loaded data size in DE
@@ -316,14 +316,14 @@ CmdWrite:
 
      ; Now the address in HL
      XCHG
-     MOV    B,H
-     MOV    C,L
+     MOV	B,H
+     MOV	C,L
 CmdWriteFile2:
      ; Command result
      CALL	SwitchRecvAndWait
-     CPI  	STA_OK_CMD
-     JZ  	Ret0
-     CPI  	STA_OK_WRITE
+     CPI	STA_OK_CMD
+     JZ		Ret0
+     CPI	STA_OK_WRITE
      RNZ;	EndCommand
 
      ; Block size MC may receive in DE
@@ -411,7 +411,7 @@ CmdExec:
      CALL	RecvBuf
      JNZ 	Error
 
-     CALL       CLS_INIT_VDP
+     CALL	CLS_INIT_VDP
 
      ; Program settings
      MVI  A, 1		; Controller version
@@ -444,20 +444,20 @@ StartCommand1:
 ;----------------------------------------------------------------------------
 ; There is synchronization with controller.Controller should answer STA_OK_DISK
 
-     ; Reply         	
+     ; Reply
      CALL	WaitForReady
      CPI	STA_OK_DISK
      JNZ	StartCommandErr2
 
      ; Switch to send mode
-     CALL       SwitchSend
+     CALL	SwitchSend
 
-     POP        PSW
-     POP        H
-     POP        B
+     POP	PSW
+     POP	H
+     POP	B
 
      ; Transmit command code
-     JMP        Send
+     JMP	Send
 StartCommandErr2:
      POP	B
      POP	H
@@ -480,10 +480,10 @@ Ret0:
 ; A is corrupted.
 
 RecvWord:
-    CALL Recv
-    MOV  E, A
-    CALL Recv
-    MOV  D, A
+    CALL	Recv
+    MOV		E, A
+    CALL	Recv
+    MOV		D, A
     RET
     
 ;----------------------------------------------------------------------------
@@ -538,81 +538,81 @@ SendBlock:
 ; Enlarge BC by block size
 ; A is corrupted.
 RecvBlock:
-     MVI    A,40H
+     MVI	A,40H
 RecvSendBlock:
-     PUSH   H
-     PUSH   D
+     PUSH	H
+     PUSH	D
 
-     PUSH   B
-     PUSH   D
-     POP    B
-     POP    D
+     PUSH	B
+     PUSH	D
+     POP	B
+     POP	D
 
-     PUSH   B
-     ORA    B
-     MOV    B,A
-     CALL   SET_DMAW
+     PUSH	B
+     ORA	B
+     MOV	B,A
+     CALL	SET_DMAW
      XCHG
-     POP    B
-     DAD    B
-     MOV    C,L
-     MOV    B,H
-     POP    D
-     POP    H
+     POP	B
+     DAD	B
+     MOV	C,L
+     MOV	B,H
+     POP	D
+     POP	H
      RET
 
 ;RecvBlock2:
-;    JMP    DmaReadVariable
+;    JMP	DmaReadVariable
 
 ;----------------------------------------------------------------------------
 ; Copy the string with limit 256 symbols (including terminator)
 
 strcpy255:
-     MVI  B, 255
+     MVI	B, 255
 strcpy255_1:
-     LDAX D
-     INX  D
-     MOV  M, A
-     INX  H
-     ORA  A
+     LDAX	D
+     INX	D
+     MOV	M, A
+     INX	H
+     ORA	A
      RZ
-     DCR  B
-     JNZ  strcpy255_1
-     MVI  M, 0 ; Terminator
+     DCR	B
+     JNZ	strcpy255_1
+     MVI	M, 0 ; Terminator
      RET
 
 ;----------------------------------------------------------------------------
 ; Send byte from A.
 
 Send:
-    PUSH    H
-    LHLD    BUF_PTR
-    MOV     M,A
-    INX     H
-    SHLD    BUF_PTR
-    POP H
+    PUSH	H
+    LHLD	BUF_PTR
+    MOV		M,A
+    INX		H
+    SHLD	BUF_PTR
+    POP		H
     RET
 
 ;----------------------------------------------------------------------------
 ; Receive byte into А
 
 Recv:
-     PUSH   H
-     PUSH   D
-     PUSH   B
-     LDA    BUF_SIZE
-     ORA    A
-     CZ     DmaReadVariable
-     LDA    BUF_SIZE
-     DCR    A
-     STA    BUF_SIZE
-     LHLD   BUF_PTR
-     MOV    A,M
-     INX    H
-     SHLD   BUF_PTR
-     POP    B
-     POP    D
-     POP    H
+     PUSH	H
+     PUSH	D
+     PUSH	B
+     LDA	BUF_SIZE
+     ORA	A
+     CZ		DmaReadVariable
+     LDA	BUF_SIZE
+     DCR	A
+     STA	BUF_SIZE
+     LHLD	BUF_PTR
+     MOV	A,M
+     INX	H
+     SHLD	BUF_PTR
+     POP	B
+     POP	D
+     POP	H
      RET
 
 ;----------------------------------------------------------------------------
