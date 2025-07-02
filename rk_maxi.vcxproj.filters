@@ -94,5 +94,8 @@
     <None Include="bootRom.asm">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="MON580.ASM">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
