@@ -127,7 +127,7 @@ SCR_VIS_WIDTH	EQU	80
 SCR_XOFS	EQU	0
 SCR_HEIGHT	EQU	24
 SCR_YOFS	EQU	0
-STRBUF		EQU	BASE+90h
+STRBUF		EQU	0B6D0H;BASE+90h
 ENDIF
 ; ??????????????????????????????????????????????
 
@@ -140,7 +140,7 @@ LOOP	MACRO	ADDR
 
 ; ??????????????????????????????????????????????
 
-	.phase  ORGB
+	.phase	ORGB
 	.8080
 PROG_PAGE	EQU	0FE00h
 	jmp ON_DC
@@ -161,15 +161,15 @@ ON_DC:
 	MVI	A,80H	; Записать в системный регистр-начальные
 	OUT	-1	; значения
 
-	MVI C,ENDPRO-BEGPRO	; Скопировать в предпоследнюю
-	LXI H,PROG_PAGE		; страницу, работающую как озу,
-	LXI D,BEGPRO		; программу для полного программирования
-	LDAX D			; всех внутренних устройств пэвм
-	MOV M,A
-	INX H
-	INX D
-	DCR C
-	JNZ $-5 ;
+	MVI	C,ENDPRO-BEGPRO	; Скопировать в предпоследнюю
+	LXI	H,PROG_PAGE	; страницу, работающую как озу,
+	LXI	D,BEGPRO	; программу для полного программирования
+	LDAX	D		; всех внутренних устройств пэвм
+	MOV	M,A
+	INX	H
+	INX	D
+	DCR	C
+	JNZ	$-5 ;
 
 	IN	-1
 	MVI	A,0C0h
@@ -292,25 +292,25 @@ EMPTY:	DB	0
 CPM:	DB	"CPM/CPM.RKL",0
 
 INTR_INIT:
-	LXI     H,E0F8
-	LXI     D,38h
-	MVI     C,07
-E0CD:	MOV     A,M
-	STAX    D
-	INX     H
-	INX     D
-	DCR     C
-	JNZ     E0CD
+	LXI	H,E0F8
+	LXI	D,38h
+	MVI	C,07
+E0CD:	MOV	A,M
+	STAX	D
+	INX	H
+	INX	D
+	DCR	C
+	JNZ	E0CD
 	.Z80
 	im	1
 	.8080
 	JMP	ORGB+1800h
 E0F8:
-	PUSH    PSW
-	LDA     0C001h
-	POP     PSW
-	EI      
-	RET     
+	PUSH	PSW
+	LDA	0C001h
+	POP	PSW
+	EI
+	RET
 	.Z80
 	rept	200H
 	if	$ ne ORGB+200H
@@ -487,6 +487,19 @@ T_Fill:
 	LD	A,B
 	OR	C
 	JP	NZ, @loop40
+	RET
+T_FillSh:
+	PUSH	BC
+	LD	B,D
+	LD	C,E
+	LD	E,A
+	CALL	T_SetAddrWrite
+	POP	BC
+	LD	A,E
+FSH01:
+	OUT	(VDP),A
+	DEC	B
+	JP	NZ, FSH01
 	RET
 
 T_WriteBytes:
@@ -2490,7 +2503,7 @@ AFE4C:	LD	A,0FFH
 ; После 15 вызовов STATUS при нажатой клавише выставляется флаг KBDFLG
 
 STATUS:
-IF 1
+IF 0
 	XOR	A
 	RET
 	NOP
@@ -2932,7 +2945,7 @@ ENDSCR	EQU	SCR_WIDTH*SCR_HEIGHT
 	LD	HL,0;//LHLD	BEGSCR
 ; Delete line contained the cursor
 ;DELLIN:
-	PUSH	HL
+;	PUSH	HL
 ;	LHLD	STRADR
 DL01:
 	LD	D,H
@@ -2957,8 +2970,8 @@ DL01:
 	CP	low(ENDSCR)
 	JP	NZ,DL01
 	XOR	A
-	LD	BC, SCR_WIDTH
-	CALL	T_Fill
+	LD	B, SCR_WIDTH
+	CALL	T_FillSh
 
 	POP	HL
 	RET
