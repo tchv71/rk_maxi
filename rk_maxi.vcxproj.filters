@@ -97,5 +97,11 @@
     <None Include="MON580.ASM">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="F8X16.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="F8X16EN.asm">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

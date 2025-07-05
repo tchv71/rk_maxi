@@ -1,5 +1,6 @@
 ; Блок начальной настройки программируемого
 ; дешифратора
+VDP	equ	098h;  TMS9918 VDP 
 	.phase 0e000h
 PROG_PAGE	EQU	0FE00h
 	jmp ON_DC
@@ -35,12 +36,15 @@ ON_DC:
 	OUT	-1
 
 	LXI SP,PROG_PAGE+0100H	; Установить указатель стека в открытой
-	LXI	H,PROG_PAGE+1	; странице, записать в hl адрес операнда
-	XRA	A
-	MOV	M,A
-	MOV	B,A
-	MVI	A,15
-	CALL	PROG_PAGE
+	;LXI	H,PROG_PAGE+1	; странице, записать в hl адрес операнда
+	;XRA	A
+	;MOV	M,A
+	;MOV	B,A
+	;MVI	A,15
+	;CALL	PROG_PAGE
+	MVI	A,14
+	OUT	VDP
+	OUT	VDP+1
 
 	IN	-1	; Обязательное чтение перед записью системного регистра
 	MVI	A,0A0H	; Включить режим репрограммирования
@@ -169,7 +173,7 @@ E0F8:
 	RET     
 
 
-	DS	0E100H-$
+	DS	0E200H-$
 	END
 
 

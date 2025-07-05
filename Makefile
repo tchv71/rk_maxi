@@ -15,7 +15,7 @@ clean:
 	del *.BIN
 	del *.NoiCtx
 
-all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl rk60k.rkl bootRom.rkl MON580.BIN
+all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl rk60k.rkl bootRom.rkl MON580.rkl
 
 init1.rkl: init1.BIN
 
@@ -108,3 +108,6 @@ bootRom.rkl: bootRom.BIN
 MON580.REL: MON580.ASM
 
 MON580.BIN: MON580.REL
+
+MON580.rkl: MON580.BIN
+	../makerk/Release/makerk.exe 8000 $< $@
