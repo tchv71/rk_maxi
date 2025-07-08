@@ -370,3 +370,7 @@ FodyWeavers.xsd
 /SDDMA.rkl
 *.com
 *.rkl
+/mon580.prn.ASM
+/monrk.prn.ASM
+/sdbios.NOI
+/sdbios.prn.ASM

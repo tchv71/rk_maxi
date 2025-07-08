@@ -8,6 +8,7 @@
 	ORG     100H
 ORGB		EQU	08000H
 VDP		EQU	98H
+;INT_ENABLE	EQU	1
 
 
 	BASE    EQU	0D700H		; служебные ячейки
@@ -30,7 +31,11 @@ ENDIF
 
 RABADR	EQU	ORGB+1800H
 
-SD_LDR	EQU	ORGB+1006H
+T9918_MOD_ORG	EQU	ORGB+100H
+MON_MOD_ORG	EQU	ORGB+0A40H
+SD_MOD_ORG	EQU	ORGB+15D0h
+
+;SD_LDR	EQU	ORGB+1006H
 DEBUG	EQU	ORGB+1009H
 
 VG_75   EQU	0C000H
@@ -127,7 +132,7 @@ SCR_VIS_WIDTH	EQU	80
 SCR_XOFS	EQU	0
 SCR_HEIGHT	EQU	24
 SCR_YOFS	EQU	0
-STRBUF		EQU	0B6D0H;BASE+90h
+STRBUF		EQU	0B000H;BASE+90h
 ENDIF
 ; ??????????????????????????????????????????????
 
@@ -140,183 +145,15 @@ LOOP	MACRO	ADDR
 
 ; ??????????????????????????????????????????????
 
-	.phase	ORGB
-	.8080
-PROG_PAGE	EQU	0FE00h
-	jmp ON_DC
-	JMP	LOOP
-ON_DC:
-	IN	-1	; Обязательное чтение перед записью системного регистра
-
-	MVI	A,20H	; Включить режим начального программирования
-	OUT	-1		; внутренних устройств
-
-	MVI	A,4	; Включить ПЗУ E000H-E0FFH
-	OUT	0E0h
-
-	MVI A,13+10h	; Номер линии выбора теневого озу
-	OUT 0FEH	; Страницу FE00H—FEFFH перевести в режим озу
-
-	IN	-1	; Обязательное чтение перед записью системного регистра
-	MVI	A,80H	; Записать в системный регистр-начальные
-	OUT	-1	; значения
-
-	MVI	C,ENDPRO-BEGPRO	; Скопировать в предпоследнюю
-	LXI	H,PROG_PAGE	; страницу, работающую как озу,
-	LXI	D,BEGPRO	; программу для полного программирования
-	LDAX	D		; всех внутренних устройств пэвм
-	MOV	M,A
-	INX	H
-	INX	D
-	DCR	C
-	JNZ	$-5 ;
-
-	IN	-1
-	MVI	A,0C0h
-	OUT	-1
-
-	LXI SP,PROG_PAGE+0100H	; Установить указатель стека в открытой
-	LXI	H,PROG_PAGE+1	; странице, записать в hl адрес операнда
-	XRA	A
-	MOV	M,A
-	MOV	B,A
-	MVI	A,15
-	CALL	PROG_PAGE
-	MVI	A,14
-	OUT	VDP
-	OUT	VDP+1
-
-	IN	-1	; Обязательное чтение перед записью системного регистра
-	MVI	A,0A0H	; Включить режим репрограммирования
-	OUT	-1	; внутренних устройств, повторяя младшие
-			; четыре разряда для последней страницы
-
-	LXI H,PROG_PAGE+1
-				; команды out для обеспечения инкремента
-				; начинаем с out 00
-	LXI	D,MAP
-	CALL	LOOP
-
-	MVI	A,4
-	OUT	-2
-	OUT	-1
-
-	IN	-1	; Обязательное чтение перед записью системного регистра
-	MVI	A,80H	; Записать в системный регистр-начальные
-	OUT	-1	; значения
-
-	; Загрузка конфигурации Апогея или CP/M
-	; Ctrl - Апогей
-	; Shift - CP/M
-	LXI	SP,0D800H
-	MVI	A,90h
-	STA	0C403h
-	MVI	A,8Ah
-	STA	0C203H
-	LDA	0C202H
-	ANI	060H
-	MOV	C,A
-	ANI	040H
-	LXI	D,APOGEE
-	JZ	LOAD
-	MOV	A,C
-	ANI	20H
-	LXI	D,CPM
-	JNZ	INTR_INIT
-
-LOAD:
-	MVI	A,3
-	PUSH	D
-	CALL	0F003H
-	POP	D
-	JNZ	INTR_INIT ; Инициализировать прерывание
-	CALL	EXEC_A
-	; Управление будет тут если вызов не удался
-	JMP	INTR_INIT ; 
-
-EXEC_A:
-	PUSH	H
-	MVI	A,0
-	XCHG
-	LXI	D,EMPTY
-	RET
-
-BEGPRO:
-	OUT 0
-	INR M
-	DCR B
-	RZ
-	JMP PROG_PAGE
-ENDPRO:
-LOOP:
-	LDAX	D
-	ORA	A
-	RZ
-	MOV	B,A
-	INX	D
-	LDAX	D
-	INX	D
-	CALL	PROG_PAGE
-	JMP	LOOP
-; Коды дешифратора:
-; 0	- 0C200h - ВВ55 - 1
-; 1	- 0C400h - ВВ55 - 2
-; 2	- 0C000h - ВГ75
-; 3	-	Memory R/O
-; 4	-	ROM
-; 5	-	Memory < 32K
-; 6	- 0CC00h - ВИ53 - 1
-; 7	- 0C600h - ВТ57
-; 8	- 0C800h - ВИ53 - 2
-; 9	- 0C100h - SD_CNTR - контроллер SD-карточки
-;10	-	ЗГ RAM
-;11	- 0CE00h - ТМ9 (Palmira Control Byte)
-;12	- 0C300h - 
-;13	-	Memory >= 32K
-;14	- 0CA00h - VDP TMS9918A
-;15	- 0F700h - RK60K Ports
-MAP:	DB	1,5,3fh,5,40h,15h,40h,13
-	DB	1,2  ; 0C000h - ВГ75
-	DB	1,9  ; 0C100h - SD_CNTR - контроллер SD-карточки
-	DB	2,0  ; 0C200h - ВВ55 - 1
-	DB	2,1  ; 0C400h - ВВ55 - 2
-	DB	2,7  ; 0C600h - ВТ57
-	DB	2,8  ; 0C800h - ВИ53 - 2
-	DB	2,14 ; 0CA00h - VDP TMS9918A
-	DB	2,6  ; 0CC00h - ВИ53 - 1
-	DB	2,11 ; 0CE00h - ТМ9  (Palmira Control Byte)
-	DB	8,13+10h,8,10,30,4,0
-APOGEE:
-	DB	"APOGEE.RKL"
-EMPTY:	DB	0
-CPM:	DB	"CPM/CPM.RKL",0
-
-INTR_INIT:
-	LXI	H,E0F8
-	LXI	D,38h
-	MVI	C,07
-E0CD:	MOV	A,M
-	STAX	D
-	INX	H
-	INX	D
-	DCR	C
-	JNZ	E0CD
-	.Z80
-	im	1
-	.8080
-	JMP	ORGB+1800h
-E0F8:
-	PUSH	PSW
-	LDA	0C001h
-	POP	PSW
-	EI
-	RET
+	include init2R.asm
+;*******************************************************************************
 	.Z80
 	rept	200H
-	if	$ ne ORGB+200H
+	if	$ ne T9918_MOD_ORG
 		defb	255
 	endif
 	endm
+;*******************************************************************************
 NXT_S:	PUSH	BC
 	LD	BC,SCR_WIDTH
 	ADD	HL,BC
@@ -349,7 +186,7 @@ T_ShAddrWriteBytes:
 T_ShortWriteBytes:
 	LD	A,(HL)
 	OUT	(VDP), A
-	INC	H
+	INC	HL
 	DEC	B
 	JP	NZ, T_ShortWriteBytes
 	RET
@@ -367,14 +204,16 @@ T_SetAddrReadHL:
 	OUT	(VDP+1),A
 	LD	A,H
 	OUT	(VDP+1),A
+IFDEF INT_ENABLE
 	EI
+ENDIF
 	RET
 
 CursorSet:
 	PUSH	BC
 	PUSH	HL
-	POP	BC
-	PUSH	BC
+	LD	B,H
+	LD	C,L
 	LD	HL,(SYMADR)
 	PUSH	DE
 	EX	DE,HL
@@ -413,7 +252,9 @@ WriteHL2:
 	LD	A,H
 	OR	40h
 	OUT	(VDP+1),A
+IFDEF INT_ENABLE
 	EI
+ENDIF
 	POP	AF
 	OUT	(VDP),A
 	RET
@@ -424,7 +265,9 @@ WriteHLMoveRight:
 	LD	A,H
 	OR	40h
 	OUT	(VDP+1),A
+IFDEF INT_ENABLE
 	EI
+ENDIF
 	LD	A,C
 	OUT	(VDP),A
 	JP	COD_18
@@ -440,7 +283,9 @@ T_SetAddrRead:
 	OUT	(VDP+1),A
 	LD	A,B
 	OUT	(VDP+1),A
+IFDEF INT_ENABLE
 	EI
+ENDIF
 	RET
 T_FillHL:
 	PUSH	BC
@@ -521,7 +366,9 @@ T_WriteRegValue:
 	OUT	(VDP+1),A
 	LD	A,B
 	OR	80H
+IFDEF INT_ENABLE
 	EI
+ENDIF
 	OUT	(VDP+1),A
 	RET
 
@@ -538,23 +385,10 @@ T_InitialiseText80:
 	PUSH	AF
 
 
-; non-bitmap color and pattern table configuration
+	; non-bitmap color and pattern table configuration
 	LD	HL,InitTbl11
 	CALL	T_SetRegs
-	;LD	B, T_REG_COLOR_TABLE
-	;LD	C, T_T80_VRAM_COLOR_ADDRESS / 40h
-	;CALL	T_WriteRegValue
 
-	; set up pattern table address (register = address / 800H)
-	;LD	B, T_REG_PATTERN_TABLE
-	;LD	C, T_T80_VRAM_PATT_ADDRESS / 800h
-	;CALL	T_WriteRegValue
-
-	; set up name table address (register = address / 400H)
-	;LD	B, T_REG_NAME_TABLE
-	;LD	C, LOW ( (T_T80_VRAM_NAME_ADDRESS / 400h) AND 0fh);7Ch OR 3 
-	;CALL	T_WriteRegValue
-	;
 	LD	BC, T_T80_VRAM_PATT_ADDRESS ; load font from address in bc
 	CALL	T_SetAddrWrite
 
@@ -564,11 +398,6 @@ T_InitialiseText80:
 	;LD	HL, tmsFont8
 	;LD	DE, tmsFont8End - tmsFont8
 	;CALL	T_WriteBytes
-
-	;LD	B, T_REG_0
-	;LD	C, T_R0_EXT_VDP_DISABLE OR T_R0_MODE_TEXT80
-	;CALL	T_WriteRegValue
-	;JP	Reg0Ok
 
 font16:
 	LD	HL, tmsFont
@@ -581,20 +410,6 @@ font16:
 	CALL	T_FillHL
 
 	LD	HL, InitTbl12
-	;JP	T_SetRegs
-
-	;LD	B, T_REG_0
-	;LD	C, T_R0_EXT_VDP_DISABLE OR T_R0_MODE_TEXT80 OR T_R0_MODE_TEXT8_80
-	;CALL	T_WriteRegValue
-
-reg0ok:
-	;LD	B,T_REG_1
-	;LD	C, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INT_ENABLE
-	;CALL	T_WriteRegValue
-
-	;LD	B, T_REG_FG_BG_COLOR
-	;LD	C, T_DK_BLUE OR (T_WHITE SHL 4)
-	;JP	T_WriteRegValue
 
 T_SetRegs:
 	LD	B,(HL)
@@ -624,26 +439,39 @@ tmsFont:
 	;include F8X16EN.ASM
 tmsFontEnd:
 	rept	0E00H
-	if	$ ne ORGB+1000H
+	if	$ ne MON_MOD_ORG
 		defb	255
 	endif
 	endm
 
+	;.dephase
+	.8080
+	include MonRkRom.asm
+	include sdbiosR.asm
+	.z80
+	rept	0400H
+	if	$ ne ORGB+1000H
+		defb	255
+	endif
+	endm
 	.dephase
-
 ; ??????????????????????????????????????????????
 
 	.phase  ORGB+1000H
 
 	JP	ORGB+1800h
 	JP	SYSCALL
-	JP	ORGB+1760h
-	JP	ORGB+0CB0h
+SD_LDR:
+	JP	SD_LDR2;SD_MOD_ORG
+	JP	START_CODE;ORGB+0CB0h
 
 	rept	6
 	NOP
 	endm
-	
+
+SD_LDR2:
+	XOR	A
+	RET
 ; ??????????????????????????????????????????????
 
 PRMPT:
@@ -733,8 +561,9 @@ DIR_N:
 	CALL	TRY_SD
 	OR	A
 	RET	NZ
-	EX	DE,HL
-	JP	(HL)
+	;EX	DE,HL
+	;JP	(HL)
+	JP	Boot2
 
 TRY_SD:
 	CALL	SD_INIT
@@ -743,6 +572,8 @@ TRY_SD:
 	RET
 
 SD_INIT:
+	JP	SI4
+IF 0
 	LD	HL,7EH
 	LD	(PORT2_B),HL
 	LD	BC,300H
@@ -762,9 +593,12 @@ SI1:	INC	L
 	JP	Z,SI4
 	LD	A,0FEH
 	JP	SI3
+ENDIF
 SI4:
 	XOR	A
-	CALL	SD_LDR
+	;CALL	SD_LDR
+	LD	HL, SdBiosEntry
+	LD	DE, BiosEntry
 	LD	(SH_ENTR),HL
 	EX	DE,HL
 	LD	(SD_ENTR),HL
@@ -1452,12 +1286,21 @@ CR2:	CALL	RST_18
 	RET
 ; ??????????????????????????????????????????????
 
-  	rept	800H
+	rept	600H
+	if	$ ne SD_MOD_ORG
+		defb	255
+	endif
+	endm
+	.dephase
+	.8080
+	include bootRom.asm
+	include SendRcv.asm
+	.z80
+	rept	600H
 	if	$ ne ORGB+1800H
 		defb	255
 	endif
 	endm
-
 	.dephase
 
 ; ??????????????????????????????????????????????
@@ -1990,14 +1833,17 @@ IFNDEF VDP
 	LD	HL,VG_75+1
 	LD	(HL),0		; reset commando
 	DEC	HL		; адрес VG_75
+	LD	(HL),04DH	; 0.1001101  77+1 знакомест
+	LD	(HL),05DH	; 00.011101  29+2 строк
+	LD	(HL),0FFH	; 1111.1110  
 ELSE
+	LD	HL,VT_57+8
+	LD	(HL),80H
+	NOP
 	CALL	SetVDP
 	JP	P_VG0
 ENDIF
-	LD	(HL),04DH	; 0.1001101  77+1 знакомест
-	LD	(HL),05DH	; 00.011101  29+2 строк
 
-	LD	(HL),0FFH	; 1111.1110  
 				; 9+1 линий в знакоместе, 9 +1 линия подчерк.
  
 	LD	(HL),0D8H	; 1.0.01.1000 без смещ.
@@ -2939,15 +2785,16 @@ SCRL2:	defb	0D1H,73H,23H,72H,23H,0D1H,73H,23H,72H,23H
 	POP	HL
 	RET
 ELSE
-ENDSCR	EQU	SCR_WIDTH*SCR_HEIGHT
-	CALL	COD_0D
+;ENDSCR	EQU	SCR_WIDTH*SCR_HEIGHT
 	PUSH	HL
+	PUSH	DE
+	LD	HL,(SYMADR)
+	LD	A,(CURSYM)
+	CALL	WriteHL2
 	LD	HL,0;//LHLD	BEGSCR
-; Delete line contained the cursor
-;DELLIN:
-;	PUSH	HL
-;	LHLD	STRADR
+	LD	B, SCR_HEIGHT-1
 DL01:
+	PUSH	BC
 	LD	D,H
 	LD	E,L
 	CALL	NXT_S
@@ -2960,19 +2807,19 @@ DL01:
 	LD	B, SCR_WIDTH
 	CALL	T_ShAddrReadBytes
 	POP	DE
+	LD	B, SCR_WIDTH
 	CALL	T_ShAddrWriteBytes
 	POP	DE
 	POP	HL
-	LD	A,H
-	CP	high(ENDSCR)
-	JP	NZ,DL01
-	LD	A,L
-	CP	low(ENDSCR)
+	POP	BC
+	DEC	B
 	JP	NZ,DL01
 	XOR	A
 	LD	B, SCR_WIDTH
+	EX	DE,HL
 	CALL	T_FillSh
 
+	POP	DE
 	POP	HL
 	RET
 

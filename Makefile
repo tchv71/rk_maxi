@@ -98,16 +98,17 @@ sprite.rkl: sprite.bin
 9918txt.rkl: 9918txt.bin
 	../makerk/Release/makerk.exe 100 $< $@
 
-bootRom.BIN: bootRom.REL
+#bootRom.BIN: bootRom.REL
 
-bootRom.REL: bootRom.asm
+#bootRom.REL: bootRom.asm
 
-bootRom.rkl: bootRom.BIN
-	../makerk/Release/makerk.exe 8600 $< $@
+#bootRom.rkl: bootRom.BIN
+#	../makerk/Release/makerk.exe 8600 $< $@
 
-MON580.REL: MON580.ASM
+MON580.REL: MON580.ASM F8X16.asm MonRKRom.asm bootRom.asm sdbiosR.asm SendRcv.asm init2R.asm
 
 MON580.BIN: MON580.REL
 
 MON580.rkl: MON580.BIN
 	../makerk/Release/makerk.exe 8000 $< $@
+	../m80noi/x64/Release/m80noi.exe mon580.prn

@@ -6,7 +6,7 @@
                        
 ;----------------------------------------------------------------------------
 
-INIT_VIDEO	EQU  0F82DH
+INIT_VIDEO	EQU  F82DH
 INIT_STACK	EQU  0D800h
 
 ; MC codes
@@ -36,14 +36,14 @@ Entry:
 
      ; Output controller name
      LXI	H, aHello
-     CALL	0F818h
+     CALL	F818h
 
      ; Output controller version
      CALL	PrintVer
 
      ; Line feed
      lxi	h, aCrLf
-     CALL	0F818h
+     CALL	F818h
 
      ; Execute SHELL.RK without command line
      LXI	H, aShellRk
@@ -57,8 +57,20 @@ Entry:
 
      ; Output message "‘¿…À Õ≈ Õ¿…ƒ≈Õ BOOT/SHELL.RK"
      LXI	H, aErrorShellRk
-     CALL	0F818h
+     CALL	F818h
      JMP	$
+F818h:
+     ;JMP        0f818h
+     RET
+F815h:
+     ;JMP        0f815h
+     RET
+F809h:
+     ;JMP        0f809h
+     RET
+F82Dh:
+     ;JMP        0f82dh
+     RET
 
 ;----------------------------------------------------------------------------
 
@@ -77,7 +89,7 @@ PrintVer:
      STA	BUF_SIZE
      STA	VER_BUF+17+2
      LXI	H, VER_BUF+1+2
-     JMP 	0F818h
+     JMP 	F818h
 
 ;----------------------------------------------------------------------------
 
@@ -115,11 +127,11 @@ Error:
 Error2:
      ; Output text "SD ERROR"
      LXI	H, aError
-     CALL	0F818h
+     CALL	F818h
 
      ; Output error code
      POP	PSW
-     CALL	0F815h
+     CALL	F815h
 
      ; Hangs
      JMP	$
@@ -128,7 +140,7 @@ CLS_INIT_VDP:
      ; Screen clear
      ; First, we need to delete all special symbols othervice sync may be corrupted
      MVI	C, 1Fh
-     CALL	0F809h     
+     CALL	F809h     
      ; And then reset video controller
      JMP	INIT_VIDEO
 ;----------------------------------------------------------------------------

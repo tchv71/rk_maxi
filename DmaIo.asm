@@ -104,7 +104,7 @@ SET_DMA:
      INR   A
      JZ    VT37
      MVI   L,8
-     MVI   M,0F4h
+     MVI   M,0F0h
 IFDEF CHANNEL0
      MVI   L,0
 ELSE
@@ -119,9 +119,9 @@ ENDIF
      INX   B
      MVI   L,8
 IFDEF CHANNEL0
-     MVI   M,0F5H
+     MVI   M,0F1H
 ELSE
-     MVI   M,0F6h
+     MVI   M,0F2h
 ENDIF
      POP   H
      RET

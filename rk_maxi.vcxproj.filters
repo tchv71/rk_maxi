@@ -103,5 +103,17 @@
     <None Include="F8X16EN.asm">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="MonRKRom.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="sdbiosR.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="SendRcv.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="init2R.asm">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
