@@ -31,26 +31,17 @@ Boot:
 Boot2:
 	DI
 	CALL	ClearRcvBuf
-	; If there is synchronization, controller will answer STA_START
-	;Rst	1
-	;CALL	Rst1
-	;CPI	STA_START
-	;RNZ
 	
-	; Flash disk initialization
-	;Rst	2
-	;CALL	Rst2
-	;CPI	STA_OK_DISK
-	;RNZ
-
 	;XRA	A	; BOOT command code
 	MVI	A,2
 	CALL	StartCommand
 	RNZ
+IF 1
 	PUSH	H
 	LXI	H,aShellRk
 	CALL	SendString
 	POP	H
+ENDIF
 	CALL	SwitchRecv
 	; This is BOOT command answer
 	;Rst	2
@@ -69,6 +60,7 @@ CMD01:
 	MOV	E, C
 	MOV	D, A
 	
+	;LXI	d,0A000h
 	; Save starting address into stack
 	PUSH   D
 	

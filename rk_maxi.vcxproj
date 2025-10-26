@@ -85,6 +85,8 @@ make all</NMakeReBuildCommandLine>
     <None Include="9918txt.asm" />
     <None Include="apogee.asm" />
     <None Include="boot.asm" />
+    <None Include="bootd.asm" />
+    <None Include="bootds.asm" />
     <None Include="bootRom.asm" />
     <None Include="DmaIo.asm" />
     <None Include="F8X16.asm" />
@@ -93,6 +95,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="init1.asm" />
     <None Include="init2.asm" />
     <None Include="init2R.asm" />
+    <None Include="init3.asm" />
     <None Include="Makefile" />
     <None Include="MEM2A.ASM" />
     <None Include="MemTest.asm" />
@@ -103,6 +106,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="RomCopy.asm" />
     <None Include="ROMCOPY.BIN" />
     <None Include="sdbios.asm" />
+    <None Include="sdbiosd.asm" />
     <None Include="sdbiosR.asm" />
     <None Include="SDDMA.ASM" />
     <None Include="SendRcv.asm" />

@@ -7,6 +7,8 @@ VDP_LINE	EQU	14
 	OUT	-1
 	ENDM
 
+	.phase 100h
+_START:
 	LXI	SP,100h
 	.Z80
 	im	1
@@ -131,7 +133,7 @@ setVdpPort:
 
 frameNumber:	DW	0
 
-onTms9918Interrupt:
+onTms9918InterruptS:
 	PUSH	PSW
 	PUSH	H
 	PUSH	D

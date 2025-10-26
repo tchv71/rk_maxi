@@ -15,19 +15,30 @@ clean:
 	del *.BIN
 	del *.NoiCtx
 
-all: init1.rkl init2.BIN RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl rk60k.rkl bootRom.rkl MON580.rkl
+all: init1.rkl init2.BIN init3.rkl RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl rk60k.rkl bootRom.rkl MON580.rkl sdbiosd.rkl bootd.rkl bootds.rkl
 
 init1.rkl: init1.BIN
 
+init3.rkl: init3.BIN
+	../makerk/Release/makerk.exe 100 $< $@
+
 boot.BIN: boot.REL
+bootd.BIN: bootd.REL
+bootds.BIN: bootds.REL
 
 boot.REL: boot.asm
+bootd.REL: bootd.asm
+bootds.REL: bootds.asm
 
 SDDMA.BIN: SDDMA.REL
 
 sdbios.REL: sdbios.asm DmaIo.asm
 
+sdbiosd.REL: sdbiosd.asm DmaIo.asm
+
 sdbios.BIN: sdbios.REL
+
+sdbiosd.BIN: sdbiosd.REL
 
 write.REL: write.asm
 
@@ -64,12 +75,27 @@ memtest.rkl: memtest.BIN
 
 SDDMA.rkl: SDDMA.BIN
 	../makerk/Release/makerk.exe 80 $< $@
+	../m80noi/x64/Release/m80noi.exe SDDMA.prn
 
 boot.rkl: boot.BIN
-	../makerk/Release/makerk.exe 0 $< $@
+	../makerk/Release/makerk.exe 100 $< $@
+	../m80noi/x64/Release/m80noi.exe boot.prn
+
+bootd.rkl: bootd.BIN
+	../makerk/Release/makerk.exe 100 $< $@
+	../m80noi/x64/Release/m80noi.exe bootd.prn
+
+bootds.rkl: bootds.BIN
+	../makerk/Release/makerk.exe 100 $< $@
+	../m80noi/x64/Release/m80noi.exe bootds.prn
 
 sdbios.rkl: sdbios.bin
-	../makerk/Release/makerk.exe D280 $< $@
+	../makerk/Release/makerk.exe D355 $< $@
+	../m80noi/x64/Release/m80noi.exe sdbios.prn
+
+sdbiosd.rkl: sdbiosd.bin
+	../makerk/Release/makerk.exe D180 $< $@
+	../m80noi/x64/Release/m80noi.exe sdbiosd.prn
 
 write.rkl: write.bin
 	../makerk/Release/makerk.exe 100 $< $@
@@ -81,6 +107,7 @@ write.rkl: write.bin
 
 9918test.rkl: 9918test.bin
 	../makerk/Release/makerk.exe 100 $< $@
+	../m80noi/x64/Release/m80noi.exe 9918test.prn
 
 sprite.REL: sprite.asm tms.asm utility.asm z180.asm
 

@@ -1,51 +1,52 @@
 ; SD BIOS for Computer "Radio 86RK"
 ; (c) 09-10-2014 vinxru (aleksey.f.morozov@gmail.com)
-; (c) 24-10-2024 tchv aka Dmitry Tsvetkov (tchv71@mail.ru)
 
-     .phase 0D600h-683-9Bh-35h+20-19h ; Last byte should be at 0D5FFh
+     .phase 0d600h-683 ; Последний байт кода должен быть 075FFh
                        
 ;----------------------------------------------------------------------------
 
-INIT_VIDEO	EQU  F82DH
-INIT_STACK	EQU  0D800h
+INIT_VIDEO      equ 0F82DH
+USER_PORT       equ 0C400H    ; Адрес КР580ВВ55
+INIT_STACK      equ 0D6CFh
+SEND_MODE       equ 10000000b ; Режим передачи (1 0 0 A СH 0 B CL)
+RECV_MODE       equ 10010000b ; Режим приема (1 0 0 A СH 0 B CL)
 
-; MC codes
-STA_START	EQU 040h ; MC switched to command receive mode
-STA_WAIT	EQU 041h ; MC is executing command
-STA_OK_DISK	EQU 042h ; The drive is working, MC is ready to receive command
-STA_OK_CMD	EQU 043h ; Command is executed
-STA_OK_READ	EQU 044h ; MC is ready to transfer next data block
-STA_OK_ENTRY	EQU 045h ; MC is ready to transfer file record
-STA_OK_WRITE	EQU 046h ; MC is waiting for next data block (for write)
-STA_OK_ADDR	EQU 047h ; MC is ready to send loading address
-STA_OK_BLOCK	EQU 04Fh 
+ERR_START   	equ 040h
+ERR_WAIT    	equ 041h
+ERR_OK_NEXT 	equ 042h
+ERR_OK          equ 043h
+ERR_OK_READ     equ 044h
+ERR_OK_ENTRY    equ 045h
+ERR_OK_WRITE	equ 046h
+ERR_OK_ADDR  	equ 047h
+ERR_OK_BLOCK    equ 04Fh 
 
-VER_BUF		EQU  BUF
-     JMP	Entry
+VER_BUF equ 0
+
 ;----------------------------------------------------------------------------
-; RK file header
+; Заголовок RK файла
 
-     db (BiosEntry) AND 0FFh, (BiosEntry) SHR 8 
+     ;db ($+2)>>8, ($+2)&0FFh
      
 ;----------------------------------------------------------------------------
-
+	      
 Entry:
-     ; Set free memory border
-     ;LXI	H, SELF_NAME
-     ;CALL	0F833h
+     ; Устанавливаем границу свободной памяти
+     LXI	H, SELF_NAME
+     CALL	0F833h
 
-     ; Output controller name
+     ; Вывод названия контроллера на экран
      LXI	H, aHello
-     CALL	F818h
+     CALL	0F818h
 
-     ; Output controller version
+     ; Вывод версии контроллера
      CALL	PrintVer
 
-     ; Line feed
+     ; Перевод строки
      lxi	h, aCrLf
-     CALL	F818h
+     CALL	0F818h
 
-     ; Execute SHELL.RK without command line
+     ; Запускаем файл SHELL.RK без ком строки
      LXI	H, aShellRk
      LXI	D, aEmpty
      CALL	CmdExec
@@ -55,22 +56,10 @@ Entry:
      CPI	04h
      JNZ 	Error2
 
-     ; Output message "ФАЙЛ НЕ НАЙДЕН BOOT/SHELL.RK"
+     ; Вывод сообщения "ФАЙЛ НЕ НАЙДЕН BOOT/SHELL.RK"
      LXI	H, aErrorShellRk
-     CALL	F818h
+     CALL	0F818h
      JMP	$
-F818h:
-     ;JMP        0f818h
-     RET
-F815h:
-     ;JMP        0f815h
-     RET
-F809h:
-     ;JMP        0f809h
-     RET
-F82Dh:
-     ;JMP        0f82dh
-     RET
 
 ;----------------------------------------------------------------------------
 
@@ -81,426 +70,447 @@ PrintVer:
      CALL	SwitchRecv
      
      ; Получаем версию набора команд и текст
-     ;LXI	D, VER_BUF
-     CALL	Recv;Block2
+     LXI	B, VER_BUF
+     LXI	D, 18          ; 1 ый байт версия, последний байт - отпускаем шину
+     CALL	RecvBlock
           
      ; Вывод версии железа
      XRA	A
-     STA	BUF_SIZE
-     STA	VER_BUF+17+2
-     LXI	H, VER_BUF+1+2
-     JMP 	F818h
+     STA	VER_BUF+17
+     LXI	H, VER_BUF+1
+     JMP 	0F818h
 
 ;----------------------------------------------------------------------------
 
-aHello:         db 13,10,"SD BIOS V1.1",13,10
-aSdController:  db "SD DMA CONTROLLER ",0
+aHello:         db 13,10,"SD BIOS V1.0",13,10
+aSdController:  db "SD CONTROLLER ",0
 aCrLf:          db 13,10,0
 aErrorShellRk:  db "fajl ne najden "
 aShellRk:       db "BOOT/SHELL.RK",0
-                db "(c) 04-05-2014 vinxru, 2024 (c) tchv"
+                db "(c) 04-05-2014 vinxru"
 
 ; Код ниже будет затерт ком строкой и собственым именем
 
-SELF_NAME	EQU $-512 ; путь (буфер 256 байт)
-CMD_LINE	EQU $-256 ; команданая строка 256 байт
+SELF_NAME    equ $-512 ; путь (буфер 256 байт)
+CMD_LINE     equ $-256 ; команданая строка 256 байт
 
 ;----------------------------------------------------------------------------
-; SD BIOS resident part
+; РЕЗИДЕНТНАЯ ЧАСТЬ SD BIOS
 ;----------------------------------------------------------------------------
 
-aError:		db "SD ERROR"
-aEmpty:		db 0
+aError:    db "o{ibka SD "
+aEmpty:    db 0
 
 ;----------------------------------------------------------------------------
-; Here we restore what been damaged during failure
+; Тут восстанавливается то, что можно быть испорчено при сбое
 
 Error:     
-     ; Stack init
+     ; Инициализация стека
      LXI	SP, INIT_STACK
 
-     ; Save error code
+     ; Сохраняем код ошибки
      PUSH	PSW
 
-     CALL	CLS_INIT_VDP
+     ; Очистка экрана
+     ; Сначала надо удалить из области экрана все спец символы, а то синхра сбивается
+     MVI	C, 1Fh
+     CALL	0F809h     
+     ; А теперь перезагрузить видеоконтроллер
+     CALL       INIT_VIDEO
 
 Error2:
-     ; Output text "SD ERROR"
+     ; Вывод текста "ОШИБКА SD "
      LXI	H, aError
-     CALL	F818h
+     CALL	0F818h
 
-     ; Output error code
+     ; Вывод кода ошибки
      POP	PSW
-     CALL	F815h
+     CALL	0F815h
 
-     ; Hangs
+     ; Виснем
      JMP	$
 
-CLS_INIT_VDP:
-     ; Screen clear
-     ; First, we need to delete all special symbols othervice sync may be corrupted
-     MVI	C, 1Fh
-     CALL	F809h     
-     ; And then reset video controller
-     JMP	INIT_VIDEO
 ;----------------------------------------------------------------------------
 
 BiosEntry:
-     PUSH	H
+     PUSH       H
      LXI	H, JmpTbl
-     ADD	A
      ADD	L
      MOV	L, A
-     JNC	BE01
-     INR	H
-BE01:
-     MOV	A,M
-     INX	H
-     MOV	H, M
-     MOV	L, A
+     MOV	L, M
      XTHL
      RET
 
-; File open modes
-O_OPEN   EQU 0
-O_CREATE EQU 1
-O_MKDIR  EQU 2
-O_DELETE EQU 100
-O_SWAP   EQU 101
-
 ;----------------------------------------------------------------------------
-; JmpTbl transitions do not have to be within the same page
+; Страница 8D00. Все переходы JmpTbl в пределах одной страницы
+
 JmpTbl:
-     dw CmdExec           ; 0 HL-file name, DE-command line / A-error code
-     dw CmdFind           ; 1 HL-file name, DE-maximum number of files to load, BC-address / HL-how much was loaded, A-error code
-     dw CmdOpenDelete     ; 2 D-mode, HL-file name / A-error code
-     dw CmdSeekGetSize    ; 3 B-mode, DE:HL-position / A-error code, DE:HL-position
-     dw CmdRead           ; 4 HL-size, DE-address / HL-how much was loaded, A-error code
-     dw CmdWrite          ; 5 HL-size, DE-address / A-error code
-     dw CmdMove           ; 6 HL-from, DE-to / A-error code
+     db LOW(CmdExec)           ; 0 HL-имя файла, DE-командная строка  / A-код ошибки
+     db LOW(CmdFind)           ; 1 HL-имя файла, DE-максимум файлов для загрузки, BC-адрес / HL-сколько загрузили, A-код ошибки
+     db LOW(CmdOpenDelete)     ; 2 D-режим, HL-имя файла / A-код ошибки
+     db LOW(CmdSeekGetSize)    ; 3 B-режим, DE:HL-позиция / A-код ошибки, DE:HL-позиция
+     db LOW(CmdRead)           ; 4 HL-размер, DE-адрес / HL-сколько загрузили, A-код ошибки
+     db LOW(CmdWrite)          ; 5 HL-размер, DE-адрес / A-код ошибки
+     db LOW(CmdMove)           ; 6 HL-из, DE-в / A-код ошибки
 
 ;----------------------------------------------------------------------------
-; HL-path, DE-maximum number of files to load, BC-address / HL-how much was loaded, A-error code
+; HL-путь, DE-максимум файлов для загрузки, BC-адрес / HL-сколько загрузили, A-код ошибки
 
 CmdFind:
-     ; Command code
+     ; Код команды
      MVI	A, 3
      CALL	StartCommand
 
-     ; Path
+     ; Путь
      CALL	SendString
 
-     ; Files maximum
+     ; Максимум файлов
      XCHG
      CALL	SendWord
 
-     ; Switch to receive mode
+     ; Переключаемся в режим приема
      CALL	SwitchRecv
 
-     ; Counter
+     ; Счетчик
      LXI	H, 0
 
 CmdFindLoop:
-     ; Wait for MC will read
+     ; Ждем пока МК прочитает
      CALL	WaitForReady
-     CPI	STA_OK_CMD
+     CPI	ERR_OK
      JZ		Ret0
-     CPI	STA_OK_ENTRY
-     RNZ;	EndCommand
+     CPI	ERR_OK_ENTRY
+     JNZ	EndCommand
 
-     ; Receive data block
-     LXI	D, 20	; Block length
+     ; Прием блока данных
+     LXI	D, 20	; Длина блока
      CALL	RecvBlock
 
-     ; Increment file counter
+     ; Увеличиваем счетчик файлов
      INX	H
 
-     ; Loop
+     ; Цикл
      JMP	CmdFindLoop
 
 ;----------------------------------------------------------------------------
-; D-mode, HL-file name / A-error code
+; D-режим, HL-имя файла / A-код ошибки
 
 CmdOpenDelete: 
-     ; Command code
+     ; Код команды
      MVI	A, 4
      CALL	StartCommand
 
-     ; Mode
+     ; Режим
      MOV	A, D
      CALL	Send
 
-     ; File name
+     ; Имя файла
      CALL	SendString
 
-     ; Wait for MC will be ready
+     ; Ждем пока МК сообразит
      CALL	SwitchRecvAndWait
-     CPI	STA_OK_CMD
+     CPI	ERR_OK
      JZ		Ret0
-     RET;JMP	EndCommand
+     JMP	EndCommand
      
 ;----------------------------------------------------------------------------
-; B-mode, DE:HL-position / A-error code, DE:HL-position
+; B-режим, DE:HL-позиция / A-код ошибки, DE:HL-позиция
 
 CmdSeekGetSize:
-     ; Command code
+     ; Код команды
      MVI 	A, 5
      CALL	StartCommand
 
-     ; Mode     
+     ; Режим     
      MOV	A, B
      CALL	Send
 
-     ; Position     
+     ; Позиция     
      CALL	SendWord
      XCHG
      CALL	SendWord
 
-     ; Wait for MC will be ready. Should answer with STA_OK_CMD code
+     ; Ждем пока МК сообразит. МК должен ответить кодом ERR_OK
      CALL	SwitchRecvAndWait
-     CPI	STA_OK_CMD
-     RNZ;	EndCommand
+     CPI	ERR_OK
+     JNZ	EndCommand
 
-     ; File size
+     ; Длина файла
      CALL	RecvWord
      XCHG
      CALL	RecvWord
 
-     ; The result
+     ; Результат
      JMP	Ret0
      
 ;----------------------------------------------------------------------------
-; HL-size, DE-address / HL-how much was loaded, A-error code
+; HL-размер, DE-адрес / HL-сколько загрузили, A-код ошибки
+
 CmdRead:
-     ; Command code
+     ; Код команды
      MVI	A, 6
      CALL	StartCommand
 
-     ; Address in BC
+     ; Адрес в BC
      MOV	B, D
      MOV	C, E
 
-     ; Block size
-     CALL	SendWord        ; HL-size
+     ; Размер блока
+     CALL	SendWord        ; HL-размер
 
-     ; Switch to receive mode
+     ; Переключаемся в режим приема
      CALL	SwitchRecv
 
-     ; Block receiving. On enter BC - address, HL - received length
-;----------------------------------------------------------------------------
-; Load data to address in BC. 
-; On exit: HL - how much loaded
-; A will be rewritten
-; If no errors, Z=1 on exit
-
-RecvBuf:
-     LXI	H, 0
-RecvBuf0:   
-     ; Wait
-     CALL	WaitForReady
-     CPI	STA_OK_READ
-     JZ		Ret0		; Z on exit (no error)
-     SUI	STA_OK_BLOCK
-     RNZ;	EndCommand	; NZ on exit (error)
-
-     ; Loaded data size in DE
-     CALL	RecvWord
-
-     ; Overall size in HL
-     DAD D
-
-     ; Load DE bytes to address in BC
-     CALL	RecvBlock
-
-     JMP	RecvBuf0
-
+     ; Прием блока. На входе адрес BC, принятая длина в HL
+     JMP	RecvBuf
 
 ;----------------------------------------------------------------------------
-; HL-size, DE-address / A-error code
+; HL-размер, DE-адрес / A-код ошибки
 
 CmdWrite:
-     ; Command code
+     ; Код команды
      MVI	A, 7
      CALL	StartCommand
      
-     ; Block size
+     ; Размер блока
      CALL	SendWord        ; HL-размер
 
-     ; Now the address in HL
+     ; Теперь адрес в HL
      XCHG
-     MOV	B,H
-     MOV	C,L
-CmdWriteFile2:
-     ; Command result
-     CALL	SwitchRecvAndWait
-     CPI	STA_OK_CMD
-     JZ		Ret0
-     CPI	STA_OK_WRITE
-     RNZ;	EndCommand
 
-     ; Block size MC may receive in DE
+CmdWriteFile2:
+     ; Результат выполнения команды
+     CALL	SwitchRecvAndWait
+     CPI  	ERR_OK
+     JZ  	Ret0
+     CPI  	ERR_OK_WRITE
+     JNZ	EndCommand
+
+     ; Размер блока, который может принять МК в DE
      CALL	RecvWord
 
-     ; Switch to send mode
+     ; Переключаемся в режим передачи    
      CALL	SwitchSend
 
-     ; Block transfer. Address in BC, length in DE.
+     ; Передача блока. Адрес BC длина DE. (Можно оптимизировать цикл)
 CmdWriteFile1:
-     CALL   SendBlock
+     MOV	A, M
+     INX	H
+     CALL	Send
+     DCX	D
+     MOV	A, D
+     ORA	E
+     JNZ 	CmdWriteFile1
+
      JMP	CmdWriteFile2
 
 ;----------------------------------------------------------------------------
-; HL-from, DE-to / A-error code
+; HL-из, DE-в / A-код ошибки
 
 CmdMove:     
-     ; Command code
+     ; Код команды
      MVI	A, 8
      CALL	StartCommand
 
-     ; File name
+     ; Имя файла
      CALL	SendString
 
-     ; Wait for MC will be ready
+     ; Ждем пока МК сообразит
      CALL	SwitchRecvAndWait
-     CPI	STA_OK_WRITE
-     RNZ;	EndCommand
+     CPI	ERR_OK_WRITE
+     JNZ	EndCommand
 
-     ; Switch to send mode
+     ; Переключаемся в режим передачи
      CALL	SwitchSend
 
-     ; File name
+     ; Имя файла
      XCHG
      CALL	SendString
 
 WaitEnd:
-     ; Wait for MC will be ready
+     ; Ждем пока МК сообразит
      CALL	SwitchRecvAndWait
-     CPI	STA_OK_CMD
+     CPI	ERR_OK
      JZ		Ret0
-     RET;    JMP	EndCommand
+     JMP	EndCommand
 
 ;----------------------------------------------------------------------------
-; HL-file name, DE-command line / A-error code
+; HL-имя файла, DE-командная строка / A-код ошибки
+
 CmdExec:
-     ; Command code
+     ; Код команды
      MVI	A, 2
      CALL	StartCommand
 
-     ; File name
+     ; Имя файла
      PUSH	H
      CALL	SendString
      POP	H
 
-     ; Wait for MC will read the file
-     ; MC should  answer with code STA_OK_ADDR
+     ; Ждем пока МК прочитает файл
+     ; МК должен ответить кодом ERR_OK_ADDR
      CALL	SwitchRecvAndWait
-     CPI	STA_OK_ADDR
-     RNZ;	EndCommand
+     CPI	ERR_OK_ADDR
+     JNZ	EndCommand
 
-     ; Save file name (HL-string)
+     ; Сохраняем имя файла (HL-строка)
      PUSH	D
      XCHG
      LXI	H, SELF_NAME
      CALL	strcpy255
      POP	D
 
-     ; Save command line (DE-string)
+     ; Сохраняем командную строку (DE-строка)
      LXI	H, CMD_LINE
      CALL	strcpy255
 
-     ; *** This is no-return point. Any error will lead to restart. ***
+     ; *** Это точка невозврата. Любая ошибка приведет к перезагрузке. ***
 
-     ; Stack init (as in monitor)
+     ; Инициализация стека (аналогично стандартному монитору)
      LXI	SP, INIT_STACK
 
-     ; Receive loadind address in BC and save it to stack
+     ; Принимаем адрес загрузки в BC и сохраняем его в стек
      CALL	RecvWord
      PUSH	D
      MOV 	B, D
      MOV 	C, E
 
-     ; Loading the file
+     ; Загружаем файл
      CALL	RecvBuf
      JNZ 	Error
 
-     CALL	CLS_INIT_VDP
+     ; Очистка экрана
+     ; Сначала надо удалить из области экрана все спец символы, а то синхра сбивается
+     MVI	C, 1Fh
+     CALL	0F809h     
+     ; А теперь перезагрузить видеоконтроллер
+     CALL       INIT_VIDEO
 
-     ; Program settings
-     MVI  A, 1		; Controller version
-     LXI  B, BiosEntry  ; SD BIOS entry point
-     LXI  D, SELF_NAME  ; Self name
-     LXI  H, CMD_LINE   ; Command line
+     ; Настройки для программы
+     MVI  A, 1		; Версия контроллера
+     LXI  B, BiosEntry  ; Точка входа SD BIOS
+     LXI  D, SELF_NAME  ; Собственное имя
+     LXI  H, CMD_LINE   ; Командная строка
 
-     ; Run loaded program
+     ; Запуск загруженной программы
      RET
 
 ;----------------------------------------------------------------------------
-; Beginning of every command
-; A - command code
+; Это была последняя команда. Дальше страница 8E00.
+;----------------------------------------------------------------------------
+
+;----------------------------------------------------------------------------
+; Начало любой команды. 
+; A - код команды
+
 StartCommand:
-     ; The first stage is synchronization with the controller
-     ; 256 attempts are accepted, each of which skips 256+ bytes
-     ; That is, this is the maximum amount of data that the controller can transmit
+     ; Первым этапом происходит синхронизация с контроллером
+     ; Принимается 256 попыток, в каждой из которых пропускается 256+ байт
+     ; То есть это максимальное кол-во данных, которое может передать контроллер
      PUSH	B
      PUSH	H
      PUSH	PSW
+     MVI	C, 0
 
 StartCommand1:
-     ; Send mode (release the bus) and init HL
+     ; Режим передачи (освобождаем шину) и инициализируем HL
      CALL       SwitchRecv
 
-     ; If there is synchronization, controller will answer STA_START
+     ; Начало любой команды (это шина адреса)
+     LXI	H, USER_PORT+1
+     MVI        M, 0
+     MVI        M, 44h
+     MVI        M, 40h
+     MVI        M, 0h
+
+     ; Если есть синхронизация, то контроллер ответит ERR_START
      CALL	Recv
-     CPI	STA_START
-     JNZ	StartCommandErr2
-;----------------------------------------------------------------------------
-; There is synchronization with controller.Controller should answer STA_OK_DISK
+     CPI	ERR_START
+     JZ		StartCommand2
 
-     ; Reply
-     CALL	WaitForReady
-     CPI	STA_OK_DISK
-     JNZ	StartCommandErr2
-
-     ; Switch to send mode
-     CALL	SwitchSend
-
-     POP	PSW
-     POP	H
+     ; Пауза. И за одно пропускаем 256 байт (в сумме будет 
+     ; пропущено 64 Кб данных, максимальный размер пакета)
+     PUSH	B
+     MVI	C, 0
+StartCommand3:
+     CALL	Recv
+     DCR	C
+     JNZ	StartCommand3
      POP	B
+        
+     ; Попытки
+     DCR	C
+     JNZ	StartCommand1    
 
-     ; Transmit command code
-     JMP	Send
+     ; Код ошибки
+     MVI	A, ERR_START
 StartCommandErr2:
-     POP	B
-     POP	H
-     POP	B
-     POP	B
+     POP	B ; Прошлое значение PSW
+     POP	H ; Прошлое значение H
+     POP	B ; Прошлое значение B     
+     POP	B ; Выходим через функцию.
      RET
 
+;----------------------------------------------------------------------------
+; Синхронизация с контроллером есть. Контроллер должен ответить ERR_OK_NEXT
+
+StartCommand2:
+     ; Ответ         	
+     CALL	WaitForReady
+     CPI	ERR_OK_NEXT
+     JNZ	StartCommandErr2
+
+     ; Переключаемся в режим передачи
+     CALL       SwitchSend
+
+     POP        PSW
+     POP        H
+     POP        B
+
+     ; Передаем код команды
+     JMP        Send
 
 ;----------------------------------------------------------------------------
-; Successful command ending 
+; Переключиться в режим передачи
+
+SwitchSend:
+     CALL	Recv
+SwitchSend0:
+     MVI	A, SEND_MODE
+     STA	USER_PORT+3
+     RET
+
+;----------------------------------------------------------------------------
+; Успешное окончание команды 
+; и дополнительный такт, что бы МК отпустил шину
+
 Ret0:
      XRA	A
+
 ;----------------------------------------------------------------------------
-; Command ending with error in A 
-;EndCommand:
+; Окончание команды с ошибкой в A 
+; и дополнительный такт, что бы МК отпустил шину
+
+EndCommand:
+     PUSH	PSW
+     CALL	Recv
+     POP	PSW
      RET
 
 ;----------------------------------------------------------------------------
-; Receive word in DE 
-; A is corrupted.
+; Принять слово в DE 
+; Портим A.
 
 RecvWord:
-    CALL	Recv
-    MOV		E, A
-    CALL	Recv
-    MOV		D, A
+    CALL Recv
+    MOV  E, A
+    CALL Recv
+    MOV  D, A
     RET
     
 ;----------------------------------------------------------------------------
-; Send word from HL 
-; A is corrupted.
+; Отправить слово из HL 
+; Портим A.
 
 SendWord:
     MOV		A, L
@@ -509,9 +519,9 @@ SendWord:
     JMP		Send
     
 ;----------------------------------------------------------------------------
-; Send string
-; HL - string
-; A is corrupted.
+; Отправка строки
+; HL - строка
+; Портим A.
 
 SendString:
      XRA	A
@@ -521,113 +531,115 @@ SendString:
      INX	H
      JMP	SendString
      
+;----------------------------------------------------------------------------
+; Переключиться в режим приема
+
+SwitchRecv:
+     MVI	A, RECV_MODE
+     STA	USER_PORT+3
+     RET
 
 ;----------------------------------------------------------------------------
-; Switch to receive mode and wait for MC ready
+; Переключиться в режим передами и ожидание готовности МК.
 
 SwitchRecvAndWait:
      CALL SwitchRecv
 
 ;----------------------------------------------------------------------------
-; Wait for MC ready.
+; Ожидание готовности МК.
 
 WaitForReady:
      CALL	Recv
-     CPI	STA_WAIT
+     CPI	ERR_WAIT
      JZ		WaitForReady
      RET
 
-
 ;----------------------------------------------------------------------------
-; Send DE bytes from address in BC
-; A is corrupted.
-SendBlock:
-     MVI    A,80H
-     JMP    RecvSendBlock
+; Принять DE байт по адресу BC
+; Портим A
 
-;----------------------------------------------------------------------------
-; Receive DE bytes to address in BC
-; Enlarge BC by block size
-; A is corrupted.
 RecvBlock:
-     MVI	A,40H
-RecvSendBlock:
      PUSH	H
-     PUSH	D
-
-     PUSH	B
-     PUSH	D
-     POP	B
-     POP	D
-
-     PUSH	B
-     ORA	B
-     MOV	B,A
-     CALL	SET_DMAW
-     XCHG
-     POP	B
-     DAD	B
-     MOV	C,L
-     MOV	B,H
-     POP	D
+     LXI 	H, USER_PORT+1
+     INR 	D
+     XRA 	A
+     ORA 	E
+     JZ 	RecvBlock2
+RecvBlock1:
+     MVI        M, 20h			; 7
+     MVI        M, 0			; 7
+     LDA	USER_PORT		; 13
+     STAX	B		        ; 7
+     INX	B		        ; 5
+     DCR	E		        ; 5
+     JNZ	RecvBlock1		; 10 = 54
+RecvBlock2:
+     DCR	D
+     JNZ	RecvBlock1
      POP	H
      RET
 
-;RecvBlock2:
-;    JMP	DmaReadVariable
+;----------------------------------------------------------------------------
+; Загрузка данных по адресу BC. 
+; На выходе HL сколько загрузили
+; Портим A
+; Если загружено без ошибок, на выходе Z=1
+
+RecvBuf:
+     LXI	H, 0
+RecvBuf0:   
+     ; Подождать
+     CALL	WaitForReady
+     CPI	ERR_OK_READ
+     JZ		Ret0		; на выходе Z (нет ошибки)
+     SUI        ERR_OK_BLOCK
+     JNZ	EndCommand	; на выходе NZ (ошибка)
+
+     ; Размер загруженных данных в DE
+     CALL	RecvWord
+
+     ; В HL общий размер
+     DAD D
+
+     ; Принять DE байт по адресу BC
+     CALL	RecvBlock
+
+     JMP	RecvBuf0
 
 ;----------------------------------------------------------------------------
-; Copy the string with limit 256 symbols (including terminator)
+; Скопироваьт строку с ограничением 256 символов (включая терминатор)
 
 strcpy255:
-     MVI	B, 255
+     MVI  B, 255
 strcpy255_1:
-     LDAX	D
-     INX	D
-     MOV	M, A
-     INX	H
-     ORA	A
+     LDAX D
+     INX  D
+     MOV  M, A
+     INX  H
+     ORA  A
      RZ
-     DCR	B
-     JNZ	strcpy255_1
-     MVI	M, 0 ; Terminator
+     DCR  B
+     JNZ  strcpy255_1
+     MVI  M, 0 ; Терминатор
      RET
 
 ;----------------------------------------------------------------------------
-; Send byte from A.
+; Отправить байт из A.
 
 Send:
-    PUSH	H
-    LHLD	BUF_PTR
-    MOV		M,A
-    INX		H
-    SHLD	BUF_PTR
-    POP		H
-    RET
+     STA	USER_PORT
 
 ;----------------------------------------------------------------------------
-; Receive byte into А
+; Принять байт в А
 
 Recv:
-     PUSH	H
-     PUSH	D
-     PUSH	B
-     LDA	BUF_SIZE
-     ORA	A
-     CZ		DmaReadVariable
-     LDA	BUF_SIZE
-     DCR	A
-     STA	BUF_SIZE
-     LHLD	BUF_PTR
-     MOV	A,M
-     INX	H
-     SHLD	BUF_PTR
-     POP	B
-     POP	D
-     POP	H
+     MVI	A, 20h
+     STA	USER_PORT+1
+     XRA	A
+     STA	USER_PORT+1
+     LDA	USER_PORT
      RET
 
 ;----------------------------------------------------------------------------
-include DmaIo.asm
-THE_END:
+
 End

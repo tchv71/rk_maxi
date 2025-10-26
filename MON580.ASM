@@ -376,6 +376,7 @@ SetVDP:
 	PUSH	DE
 	PUSH	BC
 	CALL	T_InitialiseText80
+	LD	HL,VG_75+1
 	POP	BC
 	POP	DE
 	RET
@@ -438,11 +439,11 @@ tmsFont:
 	include F8X16.ASM
 	;include F8X16EN.ASM
 tmsFontEnd:
-	rept	0E00H
-	if	$ ne MON_MOD_ORG
-		defb	255
-	endif
-	endm
+	;rept	0E00H
+	;if	(LOW($) MOD 16 ne 0)
+	;	defb	255
+	;endif
+	;endm
 
 	;.dephase
 	.8080
@@ -595,6 +596,10 @@ SI1:	INC	L
 	JP	SI3
 ENDIF
 SI4:
+	XOR	A
+	LD	(SDBUF_SIZE), A
+	INC	A
+	LD	(DmaMode), A
 	XOR	A
 	;CALL	SD_LDR
 	LD	HL, SdBiosEntry
@@ -1831,19 +1836,16 @@ PUSK_VG:			; 1001.0011
 	PUSH	HL
 IFNDEF VDP
 	LD	HL,VG_75+1
+ELSE
+	CALL	SetVDP
+ENDIF
+
+P_VG0:
 	LD	(HL),0		; reset commando
 	DEC	HL		; адрес VG_75
 	LD	(HL),04DH	; 0.1001101  77+1 знакомест
 	LD	(HL),05DH	; 00.011101  29+2 строк
 	LD	(HL),0FFH	; 1111.1110  
-ELSE
-	LD	HL,VT_57+8
-	LD	(HL),80H
-	NOP
-	CALL	SetVDP
-	JP	P_VG0
-ENDIF
-
 				; 9+1 линий в знакоместе, 9 +1 линия подчерк.
  
 	LD	(HL),0D8H	; 1.0.01.1000 без смещ.
@@ -1869,7 +1871,6 @@ AFAE1:	LD	A,(HL)		; read status
 	LD	(HL),49H
 	LD	L,8		; VT_57+8
 	LD	(HL),0A4H
-P_VG0:
 	POP	HL
 	RET
 

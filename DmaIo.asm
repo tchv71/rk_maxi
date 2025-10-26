@@ -79,32 +79,20 @@ DmaReadVariable:
      XCHG
      RET
 
-; Set DMA with waiting of the end of transfer
-SET_DMAW:
-     CALL  SET_DMA
-WAIT_DMA:
-     LDA   0C608H
-IFDEF CHANNEL0
-     ANI   1
-ELSE
-     ANI   2
-ENDIF
-     JZ    WAIT_DMA
-     RET
 ; Program DMA controller
 
 ; DE - start address
 ; BC - packet length with MSB:
 ;   10 - read cycle (transfer from memory to device)
 ;   01 - write cycle (thansfer from device to memory)
-SET_DMA:
+SET_DMAW:
      PUSH  H
      LXI   H,0C60Fh
      MOV   A,M
      INR   A
-     JZ    VT37
+     JZ    _VT37
      MVI   L,8
-     MVI   M,0F0h
+     MVI   M,0F4h
 IFDEF CHANNEL0
      MVI   L,0
 ELSE
@@ -116,17 +104,25 @@ ENDIF
      DCX   B
      MOV   M,C
      MOV   M,B
-     INX   B
+     INX    B
      MVI   L,8
 IFDEF CHANNEL0
-     MVI   M,0F1H
+     MVI   M,0F5H
 ELSE
-     MVI   M,0F2h
+     MVI   M,0F6h
 ENDIF
+WAIT_DMA:
+     MOV   A,M
+IFDEF CHANNEL0
+     ANI   1
+ELSE
+     ANI   2
+ENDIF
+     JZ    WAIT_DMA
      POP   H
      RET
 
-VT37:
+_VT37:
      MOV   A,B
      PUSH  PSW
      ANI   3Fh
@@ -167,9 +163,7 @@ IFDEF CHANNEL0
 ELSE
      MVI   M,1 ; Start channel 1
 ENDIF
-     POP   H
-     RET
-
+     JMP   WAIT_DMA
 
 Mode: db RECV_MODE
 BUF_PTR:    ds  2

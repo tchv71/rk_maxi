@@ -115,5 +115,17 @@
     <None Include="init2R.asm">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="init3.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="sdbiosd.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="bootd.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="bootds.asm">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

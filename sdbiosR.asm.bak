@@ -9,7 +9,7 @@ INIT_VIDEO	EQU  F82DH
 INIT_STACK	EQU  0D800h
 
 ; MC codes
-STA_START	EQU 040h ; MC switched to command receive mode
+STA_START	EQU 040h ; MC switched to command receive DmaMode
 STA_WAIT	EQU 041h ; MC is executing command
 STA_OK_DISK	EQU 042h ; The drive is working, MC is ready to receive command
 STA_OK_CMD	EQU 043h ; Command is executed
@@ -172,8 +172,8 @@ O_SWAP		EQU	101
 JmpTbl:
 	dw CmdExec		; 0 HL-file name, DE-command line / A-error code
 	dw CmdFind		; 1 HL-file name, DE-maximum number of files to load, BC-address / HL-how much was loaded, A-error code
-	dw CmdOpenDelete	; 2 D-mode, HL-file name / A-error code
-	dw CmdSeekGetSize	; 3 B-mode, DE:HL-position / A-error code, DE:HL-position
+	dw CmdOpenDelete	; 2 D-DmaMode, HL-file name / A-error code
+	dw CmdSeekGetSize	; 3 B-DmaMode, DE:HL-position / A-error code, DE:HL-position
 	dw CmdRead		; 4 HL-size, DE-address / HL-how much was loaded, A-error code
 	dw CmdWrite		; 5 HL-size, DE-address / A-error code
 	dw CmdMove		; 6 HL-from, DE-to / A-error code
@@ -193,7 +193,7 @@ CmdFind:
 	XCHG
 	CALL	SendWord
 
-	; Switch to receive mode
+	; Switch to receive DmaMode
 	CALL	SwitchRecv
 
 	; Counter
@@ -218,14 +218,14 @@ CmdFindLoop:
 	JMP	CmdFindLoop
 
 ;----------------------------------------------------------------------------
-; D-mode, HL-file name / A-error code
+; D-DmaMode, HL-file name / A-error code
 
 CmdOpenDelete: 
 	; Command code
 	MVI	A, 4
 	CALL	StartCommand
 
-	; Mode
+	; DmaMode
 	MOV	A, D
 	CALL	SendSD
 
@@ -239,14 +239,14 @@ CmdOpenDelete:
 	RET;JMP	EndCommand
 	
 ;----------------------------------------------------------------------------
-; B-mode, DE:HL-position / A-error code, DE:HL-position
+; B-DmaMode, DE:HL-position / A-error code, DE:HL-position
 
 CmdSeekGetSize:
 	; Command code
 	MVI 	A, 5
 	CALL	StartCommand
 
-	; Mode
+	; DmaMode
 	MOV	A, B
 	CALL	SendSD
 
@@ -282,7 +282,7 @@ CmdRead:
 	; Block size
 	CALL	SendWord	; HL-size
 
-	; Switch to receive mode
+	; Switch to receive DmaMode
 	CALL	SwitchRecv
 
 	; Block receiving. On enter BC - address, HL - received length
@@ -340,7 +340,7 @@ CmdWriteFile2:
 	; Block size MC may receive in DE
 	CALL	RecvWord
 
-	; Switch to send mode
+	; Switch to send DmaMode
 	CALL	SwitchSend
 
 	; Block transfer. Address in BC, length in DE.
@@ -364,7 +364,7 @@ CmdMove:
 	CPI	STA_OK_WRITE
 	RNZ;	EndCommand
 
-	; Switch to send mode
+	; Switch to send DmaMode
 	CALL	SwitchSend
 
 	; File name
@@ -446,7 +446,7 @@ StartCommand:
 	PUSH	PSW
 
 StartCommand1:
-	; Send mode (release the bus) and init HL
+	; Send DmaMode (release the bus) and init HL
 	CALL	SwitchRecv
 	;CALL	ClearRcvBuf
 
@@ -462,7 +462,7 @@ StartCommand1:
 	CPI	STA_OK_DISK
 	JNZ	StartCommandErr2
 
-	; Switch to send mode
+	; Switch to send DmaMode
 	CALL	SwitchSend
 
 	POP	PSW
@@ -524,7 +524,7 @@ SendString:
 	
 
 ;----------------------------------------------------------------------------
-; Switch to receive mode and wait for MC ready
+; Switch to receive DmaMode and wait for MC ready
 
 SwitchRecvAndWait:
 	CALL	SwitchRecv
@@ -578,8 +578,8 @@ RecvSendBlock:
 ;	JMP	DmaReadVariable
 
 ;----------------------------------------------------------------------------
-SEND_MODE		EQU 0
-RECV_MODE		EQU 1
+SEND_MODE		EQU 0			; Send DmaMode
+RECV_MODE		EQU 1			; Receive DmaMode
 ;----------------------------------------------------------------------------
 CHANNEL0 EQU 1
 
