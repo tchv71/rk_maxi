@@ -107,6 +107,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="ROMCOPY.BIN" />
     <None Include="sdbios.asm" />
     <None Include="sdbiosd.asm" />
+    <None Include="sdbiosds.asm" />
     <None Include="sdbiosR.asm" />
     <None Include="SDDMA.ASM" />
     <None Include="SendRcv.asm" />

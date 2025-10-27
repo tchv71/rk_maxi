@@ -32,12 +32,20 @@ Boot:
 ; Byte send and receive (HL should contain USER_PORT)
 
 Rst1:
-	JMP	Recv
-	;NOP
-	;NOP
-	;NOP
-	;NOP
-	;NOP
+;----------------------------------------------------------------------------
+; Receive byte into À
+
+Recv:
+	PUSH	D
+	PUSH	B
+	LXI	D,BUF
+	LXI	B,4001h
+	;RST	3;
+	CALL	SET_DMAW
+	LDAX	D
+	POP	B
+	POP	D
+	RET
 ;----------------------------------------------------------------------------
 ; Wait for MC ready
 Rst2:
@@ -49,6 +57,7 @@ WaitForReady:
 	RET
 
 SET_DMA2:
+	MOV	A,B
 	ORI	40h
 	MOV	B, A
 Rst3:
@@ -209,11 +218,17 @@ RecvLoop:
 	JMP	RecvLoop
 
 GetWord:
-	CALL	Rst1
-	MOV	C, A
-	;Rst	1
-	CALL	Rst1
+	PUSH	D
+	LXI	D,BUF
+	LXI	B,4002h
+	;RST	3;
+	CALL	SET_DMAW
+	LDAX	D
+	MOV	C,A
+	INX	D
+	LDAX	D
 	MOV	B,A
+	POP	D
 	RET
 ;----------------------------------------------------------------------------
 ; Print error code
@@ -223,45 +238,6 @@ GetWord:
 ;	JMP	MONITOR
 
 
-;----------------------------------------------------------------------------
-; Receive byte into À
-
-Recv:
-	PUSH	D
-	PUSH	B
-	LXI	D,BUF
-	LXI	B,4001h
-	;RST	3;
-	CALL	SET_DMAW
-	LDAX	D
-	POP	B
-	POP	D
-	RET
-
-IF 0
-; Read variable length DMA record - the first packet is 2 bytes length,
-; the second - data with previosly transmitted length
-DmaReadVariable:
-	LXI   B,4002H
-	LXI   D,BUF
-	;RST   3;
-	CALL  SET_DMAW
-	LDAX  D
-	INX   D
-	MOV   C,A
-	LDAX  D
-	INX   D
-	CALL  SET_DMA2
-	MOV   A,C
-	STA   BUF_SIZE
-	XCHG
-	SHLD  BUF_PTR
-	XCHG
-	RET
-ENDIF
-;	DW 1
-;OUTCHAR: DS 2
-;Mode: db RECV_MODE
 BUF:	ds	1
 THE_END:
 	End
