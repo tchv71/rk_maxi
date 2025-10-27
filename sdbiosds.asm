@@ -30,7 +30,7 @@ VER_BUF		EQU  BUF
 ;----------------------------------------------------------------------------
 
 Entry:
-	LXI	   SP,0D800h
+	LXI	SP,0D800h
 	; Set free memory border
 	;LXI	H, SELF_NAME
 	;CALL	0F833h
@@ -61,16 +61,16 @@ Entry:
 	CALL	F818h
 	JMP	$
 F818h:
-	;JMP	   0f818h
-	RET
+	JMP	0f818h
+	;RET
 F815h:
-	;JMP	   0f815h
-	RET
+	JMP	0f815h
+	;RET
 F809h:
-	;JMP	   0f809h
+	;JMP	0f809h
 	RET
 F82Dh:
-	;JMP	   0f82dh
+	;JMP	0f82dh
 	RET
 
 ;----------------------------------------------------------------------------
@@ -83,23 +83,25 @@ PrintVer:
 	
 	; Получаем версию набора команд и текст
 	;LXI	D, VER_BUF
-	CALL	Recv;Block2
-		
+	MVI	E, 17
+	LXI	B, VER_BUF
+	CALL	RecvBlock2
+
 	; Вывод версии железа
 	XRA	A
 	;STA	BUF_SIZE
-	STA	VER_BUF+17+2
-	LXI	H, VER_BUF+1+2
+	STA	VER_BUF+17
+	LXI	H, VER_BUF+1
 	JMP 	F818h
 
 ;----------------------------------------------------------------------------
 
-aHello:	    db 13,10,"SD BIOS V1.1",13,10
-aSdController:  db "SD DMA CONTROLLER ",0
+aHello:		db 13,10,"SD BIOS V1.1",13,10
+aSdController:	db "SD DMA CONTROLLER ",0
 aCrLf:		db 13,10,0
-aErrorShellRk:  db "fajl ne najden "
-aShellRk:	  db "BOOT/SHELL.RK",0
-			 db "(c) 04-05-2014 vinxru, 2024 (c) tchv"
+aErrorShellRk:	db "fajl ne najden "
+aShellRk:	db "BOOT/SHELL.RK",0
+		db "(c) 04-05-2014 vinxru, 2024-5 (c) tchv"
 
 ; Код ниже будет затерт ком строкой и собственым именем
 
@@ -141,7 +143,7 @@ CLS_INIT_VDP:
 	; Screen clear
 	; First, we need to delete all special symbols othervice sync may be corrupted
 	MVI	C, 1Fh
-	CALL	F809h	
+	CALL	F809h
 	; And then reset video controller
 	JMP	INIT_VIDEO
 ;----------------------------------------------------------------------------
@@ -163,22 +165,22 @@ BE01:
 	RET
 
 ; File open modes
-O_OPEN   EQU 0
-O_CREATE EQU 1
-O_MKDIR  EQU 2
-O_DELETE EQU 100
-O_SWAP   EQU 101
+O_OPEN		EQU	0
+O_CREATE	EQU	1
+O_MKDIR		EQU	2
+O_DELETE	EQU	100
+O_SWAP		EQU	101
 
 ;----------------------------------------------------------------------------
 ; JmpTbl transitions do not have to be within the same page
 JmpTbl:
-	dw CmdExec		 ; 0 HL-file name, DE-command line / A-error code
-	dw CmdFind		 ; 1 HL-file name, DE-maximum number of files to load, BC-address / HL-how much was loaded, A-error code
+	dw CmdExec		; 0 HL-file name, DE-command line / A-error code
+	dw CmdFind		; 1 HL-file name, DE-maximum number of files to load, BC-address / HL-how much was loaded, A-error code
 	dw CmdOpenDelete	; 2 D-mode, HL-file name / A-error code
-	dw CmdSeekGetSize    ; 3 B-mode, DE:HL-position / A-error code, DE:HL-position
-	dw CmdRead		 ; 4 HL-size, DE-address / HL-how much was loaded, A-error code
+	dw CmdSeekGetSize	; 3 B-mode, DE:HL-position / A-error code, DE:HL-position
+	dw CmdRead		; 4 HL-size, DE-address / HL-how much was loaded, A-error code
 	dw CmdWrite		; 5 HL-size, DE-address / A-error code
-	dw CmdMove		 ; 6 HL-from, DE-to / A-error code
+	dw CmdMove		; 6 HL-from, DE-to / A-error code
 
 ;----------------------------------------------------------------------------
 ; HL-path, DE-maximum number of files to load, BC-address / HL-how much was loaded, A-error code
@@ -229,7 +231,7 @@ CmdOpenDelete:
 
 	; Mode
 	MOV	A, D
-	CALL	Send
+	CALL	SendByte
 
 	; File name
 	CALL	SendString
@@ -250,7 +252,7 @@ CmdSeekGetSize:
 
 	; Mode	
 	MOV	A, B
-	CALL	Send
+	CALL	SendByte
 
 	; Position	
 	CALL	SendWord
@@ -447,11 +449,11 @@ StartCommand:
 	PUSH	PSW
 
 StartCommand1:
-	; Send mode (release the bus) and init HL
+	; SendByte mode (release the bus) and init HL
 	CALL	  SwitchRecv
 
 	; If there is synchronization, controller will answer STA_START
-	CALL	Recv
+	CALL	RecvByte
 	CPI	STA_START
 	JNZ	StartCommandErr2
 ;----------------------------------------------------------------------------
@@ -470,7 +472,7 @@ StartCommand1:
 	POP	B
 
 	; Transmit command code
-	JMP	Send
+	JMP	SendByte
 StartCommandErr2:
 	POP	B
 	POP	H
@@ -493,22 +495,20 @@ Ret0:
 ; A is corrupted.
 
 RecvWord:
-    CALL	Recv
-    MOV		E, A
-    CALL	Recv
-    MOV		D, A
-    RET
-    
-;----------------------------------------------------------------------------
-; Send word from HL 
-; A is corrupted.
+	PUSH	H
+	PUSH	B
+	LXI	D,BUF
+	LXI	B,4002h
+	;RST	3;
+	CALL	SET_DMAW
+	XCHG
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	POP	B
+	POP	H
+	RET
 
-SendWord:
-    MOV		A, L
-    CALL	Send
-    MOV		A, H
-    JMP		Send
-    
 ;----------------------------------------------------------------------------
 ; Send string
 ; HL - string
@@ -517,8 +517,8 @@ SendWord:
 SendString:
 	XRA	A
 	ORA	M
-	JZ		Send
-	CALL	Send
+	JZ	SendByte
+	CALL	SendByte
 	INX	H
 	JMP	SendString
 	
@@ -533,18 +533,18 @@ SwitchRecvAndWait:
 ; Wait for MC ready.
 
 WaitForReady:
-	CALL	Recv
+	CALL	RecvByte
 	CPI	STA_WAIT
-	JZ		WaitForReady
+	JZ	WaitForReady
 	RET
 
 
 ;----------------------------------------------------------------------------
-; Send DE bytes from address in BC
+; SendByte DE bytes from address in BC
 ; A is corrupted.
 SendBlock:
-	MVI    A,80H
-	JMP    RecvSendBlock
+	MVI	A,80H
+	JMP	RecvSendBlock
 
 ;----------------------------------------------------------------------------
 ; Receive DE bytes to address in BC
@@ -574,8 +574,13 @@ RecvSendBlock:
 	POP	H
 	RET
 
-;RecvBlock2:
-;    JMP	DmaReadVariable
+RecvBlock2:
+	CALL	RecvByte
+	STAX	B
+	INX	B
+	DCR	E
+	JNZ	RecvBlock2
+	RET
 
 ;----------------------------------------------------------------------------
 ; Copy the string with limit 256 symbols (including terminator)
@@ -595,18 +600,39 @@ strcpy255_1:
 	RET
 
 ;----------------------------------------------------------------------------
-; Send byte from A.
-
-Send:	LXI	D,BUF
+; Send word from HL 
+; A is corrupted.
+SendWord:
+	PUSH	D
+	PUSH	B
+	LXI	D, BUF
+	MOV	A, L
+	STAX	D
+	INX	D
+	MOV	A,H
+	STAX	D
+	DCX	D
+	LXI	B,8002h
+	JMP	SendDma
+;----------------------------------------------------------------------------
+; SendByte byte from A.
+SendByte:
+	PUSH	D
+	PUSH	B
+	LXI	D,BUF
 	STAX	D
 	LXI	B,8001H
 	;RST	3;
-	JMP	SET_DMAW
+SendDma:
+	CALL	SET_DMAW
+	POP	B
+	POP	D
+	RET
 
 ;----------------------------------------------------------------------------
 ; Receive byte into А
 
-Recv:
+RecvByte:
 	PUSH	D
 	PUSH	B
 	LXI	D,BUF
@@ -619,13 +645,9 @@ Recv:
 	RET
 
 ;----------------------------------------------------------------------------
-SEND_MODE	  EQU 0	    ; Send mode
-RECV_MODE	  EQU 1	    ; Receive mode
-;----------------------------------------------------------------------------
 CHANNEL0 EQU 1
 
 SwitchRecv:
-	ret 
 SwitchSend:
 	RET
 

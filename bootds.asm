@@ -22,7 +22,7 @@ STA_OK_BLOCK    EQU 04Fh
 Entry:
 Boot:
 	LXI	SP,100h
-	; Send mode (release the bus) and init HL
+	; SendByte mode (release the bus) and init HL
 	;CALL	SwitchRecv
 	CALL	Boot2 ; If this subprogram returns - there is an error
 	jmp	0F800H
@@ -35,7 +35,7 @@ Rst1:
 ;----------------------------------------------------------------------------
 ; Receive byte into À
 
-Recv:
+RecvByte:
 	PUSH	D
 	PUSH	B
 	LXI	D,BUF
@@ -151,7 +151,7 @@ ELSE
 ENDIF
 	JMP	WAIT_DMA
 
-Send:	LXI	D,BUF
+SendByte:	LXI	D,BUF
 	STAX	D
 	LXI	B,8001H
 	;RST	3;
@@ -173,7 +173,7 @@ Boot2:
 	RNZ; JNZ   RetrySync
 
 	XRA	A	; BOOT command code
-	CALL	Send
+	CALL	SendByte
 	; This is BOOT command answer
 	;Rst   2
 	CALL	Rst2
