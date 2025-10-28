@@ -151,7 +151,8 @@ ELSE
 ENDIF
 	JMP	WAIT_DMA
 
-SendByte:	LXI	D,BUF
+SendByte:
+	LXI	D,BUF
 	STAX	D
 	LXI	B,8001H
 	;RST	3;

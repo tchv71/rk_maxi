@@ -207,7 +207,7 @@ CmdFindLoop:
 	; Wait for MC will read
 	CALL	WaitForReady
 	CPI	STA_OK_CMD
-	JZ		Ret0
+	JZ	Ret0
 	CPI	STA_OK_ENTRY
 	RNZ;	EndCommand
 
@@ -239,7 +239,7 @@ CmdOpenDelete:
 	; Wait for MC will be ready
 	CALL	SwitchRecvAndWait
 	CPI	STA_OK_CMD
-	JZ		Ret0
+	JZ	Ret0
 	RET;JMP	EndCommand
 	
 ;----------------------------------------------------------------------------
