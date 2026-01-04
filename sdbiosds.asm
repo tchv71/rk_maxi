@@ -154,9 +154,8 @@ BiosEntry:
 	ADD	A
 	ADD	L
 	MOV	L, A
-	JNC	BE01
+	JNC	$+4
 	INR	H
-BE01:
 	MOV	A,M
 	INX	H
 	MOV	H, M

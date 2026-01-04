@@ -73,7 +73,8 @@ send: apogee.rkl
 	cmd /C copy /B $< $(PORT)
 
 memtest.rkl: memtest.BIN
-	../makerk/Release/makerk.exe 80 $< $@
+	../makerk/Release/makerk.exe 100 $< $@
+	../m80noi/x64/Release/m80noi.exe memtest.prn
 
 SDDMA.rkl: SDDMA.BIN
 	../makerk/Release/makerk.exe 80 $< $@

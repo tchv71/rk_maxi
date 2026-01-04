@@ -130,5 +130,11 @@
     <None Include="sdbiosds.asm">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="9918def.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="TMS_DEF.ASM">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

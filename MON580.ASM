@@ -8,6 +8,7 @@
 	ORG     100H
 ORGB		EQU	08000H
 VDP		EQU	98H
+VDP_TEXT_SCROLL	EQU	1
 ;INT_ENABLE	EQU	1
 
 
@@ -31,7 +32,7 @@ ENDIF
 
 RABADR	EQU	ORGB+1800H
 
-T9918_MOD_ORG	EQU	ORGB+100H
+T9918_MOD_ORG	EQU	ORGB+103H
 MON_MOD_ORG	EQU	ORGB+0A40H
 SD_MOD_ORG	EQU	ORGB+15D0h
 
@@ -106,7 +107,7 @@ CHSUM	EQU	BASE+57H
 FLDR	EQU	BASE+6BH	; имя папки 'TAPE/'
 COMBUF	EQU	BASE+70H        ; буфер ввода директивы
 
-STACK	EQU	BASE+100H	; стек монитора
+STACK	EQU	BASE;+100H	; стек монитора
 
 
 PORT_A		EQU	KBDPPA
@@ -130,9 +131,9 @@ ELSE
 SCR_WIDTH	EQU	80
 SCR_VIS_WIDTH	EQU	80
 SCR_XOFS	EQU	0
-SCR_HEIGHT	EQU	24
+SCR_HEIGHT	EQU	30;24
 SCR_YOFS	EQU	0
-STRBUF		EQU	0B000H;BASE+90h
+STRBUF		EQU	0D300H;BASE+90h
 ENDIF
 ; ??????????????????????????????????????????????
 
@@ -148,11 +149,13 @@ LOOP	MACRO	ADDR
 	include init2R.asm
 ;*******************************************************************************
 	.Z80
+IF 0
 	rept	200H
 	if	$ ne T9918_MOD_ORG
 		defb	255
 	endif
 	endm
+ENDIF
 ;*******************************************************************************
 NXT_S:	PUSH	BC
 	LD	BC,SCR_WIDTH
@@ -296,6 +299,23 @@ T_FillHL:
 	POP	BC
 	JP	@loop40
 
+T_FillWord:
+	PUSH	BC
+	LD	B,H
+	LD	C,L
+	CALL	T_SetAddrWrite
+	POP	BC
+TFW01:
+	LD	A,D
+	OUT	(VDP),A
+	LD	A,E
+	OUT	(VDP),A
+	DEC	BC
+	LD	A,B
+	OR	C
+	JP	NZ, TFW01
+	RET
+
 	include TMS_DEF.ASM
 
 ; reset registers and clear all 16KB of video memory
@@ -433,6 +453,8 @@ InitTbl12:
 	DB	T_REG_0,		T_R0_EXT_VDP_DISABLE OR T_R0_MODE_TEXT80 OR T_R0_MODE_TEXT8_80
 	DB	T_REG_1,		T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE; OR T_R1_INT_ENABLE
 	DB	T_REG_FG_BG_COLOR,	T_DK_BLUE OR (T_WHITE SHL 4)
+	DB	39h, 1Ch 
+	DB	39h, 1Ch 
 	DB	0FFh
 
 tmsFont:
@@ -473,6 +495,23 @@ SD_LDR:
 SD_LDR2:
 	XOR	A
 	RET
+	.8080
+SwitchSend:
+	PUSH  H
+	PUSH  D
+	PUSH  B
+	XRA	A ; MVI	A,SEND_MODE
+SetMode:
+	STA	DmaMode
+	XRA	A
+	STA	SDBUF_SIZE
+	LXI	H, SDBBUF
+	SHLD	SDBUF_PTR
+	POP	B
+	POP	D
+	POP	H
+	RET
+	.z80
 ; ??????????????????????????????????????????????
 
 PRMPT:
@@ -2583,8 +2622,12 @@ CLSLOO:	LD	(HL),0
 ELSE
 	LD	HL, 0
 	LD	BC,SCR_WIDTH * SCR_HEIGHT
+	LD	DE, 4Fh
+	CALL	T_FillWord
+IFDEF	VDP_TEXT_SCROLL
 	XOR	A
-	CALL	T_FillHL
+	CALL	SetTextScroll
+ENDIF
 ENDIF
 SCR_START	EQU	(SCR_YOFS SHL 8)+SCR_XOFS
 HOME:	LD	DE, SCR_START
@@ -2786,9 +2829,78 @@ SCRL2:	defb	0D1H,73H,23H,72H,23H,0D1H,73H,23H,72H,23H
 	POP	HL
 	RET
 ELSE
-;ENDSCR	EQU	SCR_WIDTH*SCR_HEIGHT
+IFDEF VDP_TEXT_SCROLL
+	;PUSH	BC
+	PUSH	HL
+	LD	B, T_REG_SCROLL_Y
+	LD	HL, ScrollLine
+	INC	(HL)
+	LD	A, SCR_HEIGHT
+	CP	(HL)
+	JP	NZ, $+5
+	LD	(HL), 0
+	LD	C, (HL)
+	CALL	T_WriteRegValue
+	POP	HL
+	;POP	BC
+	
+	LD	A, (ScrollLine)
+	OR	A
+	JP	NZ, $+5
+	LD	A, SCR_HEIGHT
+IF 1
+	DEC	A
+	;PUSH	BC
+	LD	L, A
+	LD	H, 0
+	ADD	HL, HL
+	ADD	HL, HL
+	ADD	HL, HL
+	ADD	HL, HL
+	LD	C, L
+	LD	B, H
+	ADD	HL, HL
+	ADD	HL, HL
+	ADD	HL, BC
+	;POP	BC
+	;JP	DL02
+ELSE
+	LD	HL, 0
+DL01:
+	DEC	A
+	JP	Z, DL02
+	PUSH	AF
+	CALL	NXT_S
+	POP	AF
+	JP	DL01
+ENDIF
+DL02:
+	;PUSH	BC
+	PUSH	DE
+	LD	BC, SCR_WIDTH
+	LD	DE,4Fh
+	CALL	T_FillWord
+	POP	DE
+	;POP	BC
+	RET
+SetTextScroll:
+	PUSH	BC
+	LD	(ScrollLine), A
+	LD	C, A
+	LD	B, T_REG_SCROLL_Y
+	CALL	T_WriteRegValue
+	POP	BC
+	RET
+ScrollLine:
+	db	0
+ELSE
 	PUSH	HL
 	PUSH	DE
+	PUSH	BC
+
+	LD	BC, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INC_ONE OR (T_REG_1 SHL 8) 
+	CALL	T_WriteRegValue
+
 	LD	HL,(SYMADR)
 	LD	A,(CURSYM)
 	CALL	WriteHL2
@@ -2805,24 +2917,38 @@ DL01:
 	PUSH	DE
 	EX	DE,HL
 	LD	HL,STRBUF
-	LD	B, SCR_WIDTH
+	LD	B, SCR_WIDTH; * 2
 	CALL	T_ShAddrReadBytes
 	POP	DE
-	LD	B, SCR_WIDTH
+	LD	B, SCR_WIDTH; * 2
 	CALL	T_ShAddrWriteBytes
 	POP	DE
 	POP	HL
 	POP	BC
 	DEC	B
 	JP	NZ,DL01
-	XOR	A
-	LD	B, SCR_WIDTH
-	EX	DE,HL
-	CALL	T_FillSh
 
+
+	LD	BC, SCR_WIDTH/2
+	;EX	DE,HL
+	LD	DE,0;4Fh
+	CALL	T_FillWord
+
+	LD	BC, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR (T_REG_1 SHL 8)
+	CALL	T_WriteRegValue
+
+	POP	BC
 	POP	DE
 	POP	HL
 	RET
+ENDIF
+; +--------------------+
+; |0                   |
+; |1                   |
+; |2                   |
+; |3                   |
+; |4                   |
+; +--------------------+
 
 
 ENDIF

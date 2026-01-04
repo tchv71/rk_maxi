@@ -144,6 +144,7 @@ onTms9918InterruptS:
 	PUSH	H 
 	PUSH	D 
 	PUSH	B 
+	CALL	T_ReadStatus 
 	MVI	B, T_REG_FG_BG_COLOR 
 	MVI	C, (T_WHITE SHL 4) OR T_CYAN 
 	CALL	T_WriteRegValue 
@@ -154,10 +155,10 @@ onTms9918InterruptS:
 	MVI	B, T_REG_FG_BG_COLOR 
 	MVI	C, (T_WHITE SHL 4) OR T_BLACK 
 	CALL	T_WriteRegValue 
-	CALL	T_ReadStatus 
 	POP	B 
 	POP	D 
 	POP	H 
+	;CALL	T_ReadStatus 
 	POP	PSW 
 	EI 
 	RET 
@@ -173,7 +174,7 @@ as02:
 	MOV	A,L 
 	ADC	C 
 	MOV	L,A 
-	JNC	$+4 
+	JNC	CheckTbl 
 	INR	H 
 CheckTbl: 
 	LXI	D, sinEnd - sinTbl 
@@ -192,61 +193,61 @@ as01:	XCHG
 	DAD	D 
 	PUSH	B 
  
-	LXI	B, T_DEF_VRAM_SPR_ATTR_ADDRESS 
-	LDA	i_8 
-	ADD	C 
-	MOV	C,A 
-	JNC	$+4 
-	INR	B 
-	MOV	D,B 
-	MOV	E,C 
-	MVI	A,4 
-	ADD	C 
-	MOV	C,A 
-	JNC	$+4 
-	INR	B 
-	CALL	T_SetAddrWrite 
+		LXI	B, T_DEF_VRAM_SPR_ATTR_ADDRESS 
+		LDA	i_8 
+		ADD	C 
+		MOV	C,A 
+		JNC	as12 
+		INR	B 
+as12:		MOV	D,B 
+		MOV	E,C 
+		MVI	A,4 
+		ADD	C 
+		MOV	C,A 
+		JNC	as03 
+		INR	B 
+as03:		CALL	T_SetAddrWrite 
  
-	LDA	frameNumber+1 
-	RAR 
-	LDA	frameNumber 
-	RAR 
+		LDA	frameNumber+1 
+		RAR 
+		LDA	frameNumber 
+		RAR 
 	POP	B 
 	PUSH	B 
-	ADD	B 
-	ADI	24 
-	CPI	0D0h 
-	JNZ	$+4 
-	INR	A 
-	OUT	VDP ; WriteData 
-	PUSH	PSW 
-	MOV	A,M 
-	OUT	VDP 
+		ADD	B 
+		ADI	24 
+		CPI	0D0h 
+		JNZ	as04 
+		INR	A 
+as04:		OUT	VDP ; WriteData 
+		PUSH	PSW 
+			MOV	A,M 
+			OUT	VDP 
  
-	MOV	B,D 
-	MOV	C,E 
-	CALL	T_SetAddrWrite 
-	POP	PSW 
+			MOV	B,D 
+			MOV	C,E 
+			CALL	T_SetAddrWrite 
+		POP	PSW 
  
-	CPI	0D2h 
-	JNZ	$+4 
-	INR	A 
-	SUI	2 
-	OUT	VDP 
-	MOV	A,M 
-	SUI	2 
-	OUT	VDP 
+		CPI	0D2h 
+		JNZ	as05 
+		INR	A 
+as05:		SUI	2 
+		OUT	VDP 
+		MOV	A,M 
+		SUI	2 
+		OUT	VDP 
  
-	MOV	B,D 
-	MOV	C,E 
-	INX	B 
-	INX	B 
-	CALL	T_SetAddrRead 
-	IN	VDP 
-	PUSH	PSW 
-	CALL	T_SetAddrWrite 
-	POP	PSW 
-	OUT	VDP 
+		MOV	B,D 
+		MOV	C,E 
+		INX	B 
+		INX	B 
+		CALL	T_SetAddrRead 
+		IN	VDP 
+		PUSH	PSW 
+			CALL	T_SetAddrWrite 
+		POP	PSW 
+		OUT	VDP 
  
 	POP	B 
 	LDA	i_8 
@@ -259,7 +260,7 @@ as01:	XCHG
 	ADI	10 
 	MOV	B,A 
 	CPI	130 
-	JNZ	as02 
+	JC	as02 
 	RET 
  
 str:	DB 'Hello, World!' 

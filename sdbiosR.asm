@@ -620,21 +620,6 @@ SwitchRecv:
 RM01:
 	MVI	A, RECV_MODE
 	JMP	SetMode
-SwitchSend:
-	PUSH  H
-	PUSH  D
-	PUSH  B
-	XRA	A ; MVI	A,SEND_MODE
-SetMode:
-	STA	DmaMode
-	XRA	A
-	STA	SDBUF_SIZE
-	LXI	H, SDBBUF
-	SHLD	SDBUF_PTR
-	POP	B
-	POP	D
-	POP	H
-	RET
 
 THE_END_SDB:
 DmaMode		EQU	0D240h		;:	db RECV_MODE
