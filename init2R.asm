@@ -63,8 +63,10 @@ ON_DC:
 	MVI	A,80H	; Записать в системный регистр-начальные
 	OUT	-1	; значения
 
+IFNDEF DMA_SIMPLE
 	MVI	A, RECV_MODE
 	STA	DmaMode
+ENDIF
 
 	; Загрузка конфигурации Апогея или CP/M
 	; Ctrl - Апогей

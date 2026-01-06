@@ -82,11 +82,14 @@ PrintVer:
 	; Получаем версию набора команд и текст
 	;LXI	D, VER_BUF
 	CALL	RecvSD;Block2
-	 
+	
+IFDEF DMA_SIMPLE
 	; Вывод версии железа
 	XRA	A
 	STA	SDBUF_SIZE
+ENDIF
 	STA	VER_BUF+17+2
+
 	LXI	H, VER_BUF+1+2
 	JMP 	F818h
 
@@ -216,6 +219,25 @@ CmdFindLoop:
 
 	; Loop
 	JMP	CmdFindLoop
+ERR_DATETIME	EQU	50H
+
+; IN and OUT MACRO comands
+@in	MACRO	addr
+IF ((addr) LT 256)
+	in	addr
+ELSE
+	lda	addr
+ENDIF
+	ENDM
+
+@out	MACRO	addr
+IF ((addr) LT 256)
+	out	addr
+ELSE
+	sta	addr
+ENDIF
+	ENDM
+
 
 ;----------------------------------------------------------------------------
 ; D-mode, HL-file name / A-error code
@@ -227,7 +249,7 @@ CmdOpenDelete:
 
 	; Mode
 	MOV	A, D
-	CALL	SendSD
+	CALL	SendByte
 
 	; File name
 	CALL	SendString
@@ -236,8 +258,11 @@ CmdOpenDelete:
 	CALL	SwitchRecvAndWait
 	CPI	STA_OK_CMD
 	JZ	Ret0
-	RET;JMP	EndCommand
-	
+IFDEF USE_DMA
+	ret
+ELSE
+	JMP	EndCommand
+ENDIF
 ;----------------------------------------------------------------------------
 ; B-mode, DE:HL-position / A-error code, DE:HL-position
 
@@ -248,7 +273,7 @@ CmdSeekGetSize:
 
 	; Mode
 	MOV	A, B
-	CALL	SendSD
+	CALL	SendByte
 
 	; Position
 	CALL	SendWord
@@ -258,8 +283,11 @@ CmdSeekGetSize:
 	; Wait for MC will be ready. Should answer with STA_OK_CMD code
 	CALL	SwitchRecvAndWait
 	CPI	STA_OK_CMD
-	RNZ;	EndCommand
-
+IFDEF USE_DMA
+	RNZ
+ELSE
+	JNZ	EndCommand
+ENDIF
 	; File size
 	CALL	RecvWord
 	XCHG
@@ -286,7 +314,7 @@ CmdRead:
 	CALL	SwitchRecv
 
 	; Block receiving. On enter BC - address, HL - received length
-;----------------------------------------------------------------------------
+IFDEF USE_DMA
 ; Load data to address in BC. 
 ; On exit: HL - how much loaded
 ; A will be rewritten
@@ -299,7 +327,7 @@ RecvBuf0:
 	CALL	WaitForReady
 	CPI	STA_OK_READ
 	JZ	Ret0		; Z on exit (no error)
-	SUI	STA_OK_BLOCK
+	CPI	STA_OK_BLOCK
 	RNZ;	EndCommand	; NZ on exit (error)
 
 	; Loaded data size in DE
@@ -308,15 +336,18 @@ RecvBuf0:
 	; Overall size in HL
 	DAD	D
 
+	;CALL	ReceiveBufferIfEmpty
 	; Load DE bytes to address in BC
 	CALL	RecvBlock
 
 	JMP	RecvBuf0
+ELSE
+	JMP	RecvBuf
+ENDIF
 
 
 ;----------------------------------------------------------------------------
 ; HL-size, DE-address / A-error code
-
 CmdWrite:
 	; Command code
 	MVI	A, 7
@@ -327,15 +358,21 @@ CmdWrite:
 
 	; Now the address in HL
 	XCHG
-	MOV	B,H
-	MOV	C,L
+IFDEF USE_DMA
+	MOV    B,H
+	MOV    C,L
+ENDIF
 CmdWriteFile2:
 	; Command result
 	CALL	SwitchRecvAndWait
 	CPI	STA_OK_CMD
 	JZ	Ret0
 	CPI	STA_OK_WRITE
-	RNZ;	EndCommand
+IFDEF USE_DMA
+	RNZ
+ELSE
+	JNZ	EndCommand
+ENDIF
 
 	; Block size MC may receive in DE
 	CALL	RecvWord
@@ -345,7 +382,18 @@ CmdWriteFile2:
 
 	; Block transfer. Address in BC, length in DE.
 CmdWriteFile1:
+IFDEF USE_DMA
 	CALL	SendBlock
+ELSE
+	MOV	A, M
+	INX	H
+	CALL	SendByte
+	DCX	D
+	MOV	A, D
+	ORA	E
+	JNZ 	CmdWriteFile1
+ENDIF
+
 	JMP	CmdWriteFile2
 
 ;----------------------------------------------------------------------------
@@ -444,19 +492,65 @@ StartCommand:
 	PUSH	B
 	PUSH	H
 	PUSH	PSW
+IFNDEF USE_DMA
+	MVI	C, 0
+ENDIF
 
 StartCommand1:
 	; Send mode (release the bus) and init HL
 	CALL	SwitchRecv
-	;CALL	ClearRcvBuf
 
+IFNDEF USE_DMA
+	; Начало любой команды (это шина адреса)
+	;LXI	H, USER_PORT+1
+	;MVI	M,0
+	XRA	A
+	@out	USER_PORT+1
+	;MVI	M, 44h
+	MVI	A,44h
+	@out	USER_PORT+1
+	;MVI	M, 40h
+	MVI	A,40h
+	@out	USER_PORT+1
+	;MVI	M, 0h
+	XRA	A
+	@out	USER_PORT+1
+ENDIF
 	; If there is synchronization, controller will answer STA_START
-	CALL	RecvSD
+	CALL	RecvByte
 	CPI	STA_START
+IFDEF USE_DMA
 	JNZ	StartCommandErr2
+ELSE
+	JZ	StartCommand2
+
+	; Пауза. И за одно пропускаем 256 байт (в сумме будет 
+	; пропущено 64 Кб данных, максимальный размер пакета)
+	PUSH	B
+	MVI	C, 0
+StartCommand3:
+	CALL	RecvByte
+	DCR	C
+	JNZ	StartCommand3
+	POP	B
+
+	; Попытки
+	DCR	C
+	JNZ	StartCommand1
+	; Код ошибки
+	MVI	A, STA_START
+StartCommandErr2:
+	POP	B ; Прошлое значение PSW
+	POP	H ; Прошлое значение H
+	POP	B ; Прошлое значение B
+	POP	B ; Выходим через функцию.
+	RET
+
 ;----------------------------------------------------------------------------
 ; There is synchronization with controller.Controller should answer STA_OK_DISK
 
+StartCommand2:
+ENDIF
 	; Reply
 	CALL	WaitForReady
 	CPI	STA_OK_DISK
@@ -470,15 +564,26 @@ StartCommand1:
 	POP	B
 
 	; Transmit command code
-	JMP	SendSD
+	JMP	SendByte
+IFDEF USE_DMA
 StartCommandErr2:
 	POP	B
 	POP	H
 	POP	B
 	POP	B
 	RET
-ENDIF
+ELSE
 
+;----------------------------------------------------------------------------
+; Переключиться в режим передачи
+
+SwitchSend:
+	CALL	RecvByte
+SwitchSend0:
+	MVI	A, SEND_MODE
+	@out	USER_PORT+3
+	RET
+ENDIF
 ;----------------------------------------------------------------------------
 ; Successful command ending 
 Ret0:
@@ -486,6 +591,13 @@ Ret0:
 ;----------------------------------------------------------------------------
 ; Command ending with error in A 
 ;EndCommand:
+IFNDEF USE_DMA
+
+EndCommand:
+	PUSH	PSW
+	CALL	RecvByte
+	POP	PSW
+ENDIF
 	RET
 
 ;----------------------------------------------------------------------------
@@ -493,10 +605,25 @@ Ret0:
 ; A is corrupted.
 
 RecvWord:
-	CALL	RecvSD
+IFNDEF DMA_SIMPLE
+	CALL	RecvByte
 	MOV	E, A
-	CALL	RecvSD
+	CALL	RecvByte
 	MOV	D, A
+ELSE
+	PUSH	H
+	PUSH	B
+	LXI	D,SDBUF2
+	LXI	B,4002h
+	;RST	3;
+	CALL	SET_DMAW
+	XCHG
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	POP	B
+	POP	H
+ENDIF
 	RET
 	
 ;----------------------------------------------------------------------------
@@ -504,11 +631,24 @@ RecvWord:
 ; A is corrupted.
 
 SendWord:
+IFNDEF DMA_SIMPLE
 	MOV	A, L
-	CALL	SendSD
+	CALL	SendByte
 	MOV	A, H
-	JMP	SendSD
-	
+	JMP	SendByte
+ELSE
+	PUSH	D
+	PUSH	B
+	LXI	D, SDBUF2
+	MOV	A, L
+	STAX	D
+	INX	D
+	MOV	A,H
+	STAX	D
+	DCX	D
+	LXI	B,8002h
+	JMP	SendDma
+ENDIF
 ;----------------------------------------------------------------------------
 ; Send string
 ; HL - string
@@ -517,11 +657,20 @@ SendWord:
 SendString:
 	XRA	A
 	ORA	M
-	JZ	SendSD
-	CALL	SendSD
+	JZ	SendByte
+	CALL	SendByte
 	INX	H
 	JMP	SendString
 	
+IFNDEF USE_DMA
+;----------------------------------------------------------------------------
+; Switch to receive mode
+
+SwitchRecv:
+	MVI	A, RECV_MODE
+	@out	USER_PORT+3
+	RET
+ENDIF
 
 ;----------------------------------------------------------------------------
 ; Switch to receive mode and wait for MC ready
@@ -533,12 +682,12 @@ SwitchRecvAndWait:
 ; Wait for MC ready.
 
 WaitForReady:
-	CALL	RecvSD
+	CALL	RecvByte
 	CPI	STA_WAIT
 	JZ	WaitForReady
 	RET
 
-
+IFDEF USE_DMA
 ;----------------------------------------------------------------------------
 ; Send DE bytes from address in BC
 ; A is corrupted.
@@ -553,9 +702,9 @@ SendBlock:
 RecvBlock:
 	MVI	A,40H
 RecvSendBlock:
-	PUSH	H
 	PUSH	D
 
+	; Swap BC and DE
 	PUSH	B
 	PUSH	D
 	POP	B
@@ -568,15 +717,136 @@ RecvSendBlock:
 	XCHG
 	POP	B
 	DAD	B
-	MOV	C,L
-	MOV	B,H
+	XCHG
+	MOV	C,E
+	MOV	B,D
 	POP	D
-	POP	H
 	RET
 
 ;RecvBlock2:
 ;	JMP	DmaReadVariable
+ELSE
+;----------------------------------------------------------------------------
+; Принять DE байт по адресу BC
+; Портим A
+RecvBlock:
+	PUSH	H
+	LXI 	H, USER_PORT+1
+	INR 	D
+	XRA 	A
+	ORA 	E
+	JZ 	RecvBlock2
+RecvBlock1:
+	MVI	A, 20h
+	@out	USER_PORT+1
+	XRA	A
+	@out	USER_PORT+1
+	@in	USER_PORT		; 13
+	STAX	B		        ; 7
+	INX	B		        ; 5
+	DCR	E		        ; 5
+	JNZ	RecvBlock1		; 10 = 54
+RecvBlock2:
+	DCR	D
+	JNZ	RecvBlock1
+	POP	H
+	RET
 
+;PPI_PG	EQU	0D0H 
+
+;----------------------------------------------------------------------------
+; Загрузка данных по адресу BC. 
+; На выходе HL сколько загрузили
+; Портим A
+; Если загружено без ошибок, на выходе Z=1
+
+RecvBuf:
+	LXI	H, 0
+RecvBuf0:
+	; Подождать
+	CALL	WaitForReady
+	CPI	STA_OK_READ
+	JZ	Ret0		; на выходе Z (нет ошибки)
+	CPI	STA_OK_BLOCK
+	JNZ	EndCommand	; на выходе NZ (ошибка)
+
+	; Размер загруженных данных в DE
+	CALL	RecvWord
+
+	; В HL общий размер
+	DAD D
+
+	; Принять DE байт по адресу BC
+	CALL	RecvBlock
+
+	JMP	RecvBuf0
+ENDIF
+;----------------------------------------------------------------------------
+; Send byte from A.
+SendByte:
+IFDEF USE_DMA
+IFNDEF DMA_SIMPLE
+	PUSH	H
+	LHLD	BUF_PTR
+	MOV	M,A
+	INX	H
+	SHLD	BUF_PTR
+	POP H
+ELSE
+	PUSH	D
+	PUSH	B
+	LXI	D,SDBUF2
+	STAX	D
+	LXI	B,8001H
+	;RST	3;
+SendDma:
+	CALL	SET_DMAW
+	POP	B
+	POP	D
+ENDIF
+	RET
+ELSE
+	@out	USER_PORT
+ENDIF
+;----------------------------------------------------------------------------
+; Receive byte into А
+
+RecvByte:
+IFDEF USE_DMA
+IFNDEF DMA_SIMPLE
+	LDA	BUF_SIZE
+	ORA	A
+	CZ	DmaReadVariable
+	LDA	BUF_SIZE
+	DCR	A
+	STA	BUF_SIZE
+	PUSH	H
+	LHLD	BUF_PTR
+	MOV	A,M
+	INX	H
+	SHLD	BUF_PTR
+	POP	H
+ELSE
+	PUSH	D
+	PUSH	B
+	LXI	D,SDBUF2
+	LXI	B,4001h
+	;RST	3;
+	CALL	SET_DMAW
+	LDAX	D
+	POP	B
+	POP	D
+ENDIF
+ELSE
+	MVI	A, 20h
+	@out	USER_PORT+1
+	XRA	A
+	@out	USER_PORT+1
+	@in	USER_PORT
+ENDIF
+	RET
+IFDEF USE_DMA
+IFNDEF DMA_SIMPLE
 ;----------------------------------------------------------------------------
 SEND_MODE		EQU 0
 RECV_MODE		EQU 1
@@ -620,10 +890,61 @@ SwitchRecv:
 RM01:
 	MVI	A, RECV_MODE
 	JMP	SetMode
+SwitchSend:
+	PUSH	H
+	XRA	A ; MVI   A,SEND_MODE
+SetMode:
+	STA	Mode
+	XRA	A
+	STA	BUF_SIZE
+	LXI	H, BUF
+	SHLD	BUF_PTR
+	;MVI	C,0
+	POP	H
+	RET
 
-THE_END_SDB:
+; Read variable length DMA record - the first packet is 2 bytes length,
+; the second - data with previosly transmitted length
+DmaReadVariable:
+	PUSH	D
+	PUSH	B
+	LXI	B,4002H
+	LXI	D,SDBUF2
+	;RST	3
+	CALL	SET_DMAW
+	LDAX	D
+	INX	D
+	MOV	C,A
+	LDAX	D
+	INX	D
+	ORI	40H
+	MOV	B,A
+	CALL	SET_DMAW
+	MOV	A,C
+	STA	BUF_SIZE
+	;CPI	16
+	;JNC	$
+	;MOV	A,B
+	;ANI	3Fh
+	;JNZ	$
+	XCHG
+	SHLD	BUF_PTR
+	XCHG
+	POP	B
+	POP	D
+	RET
+
+ELSE ; DMA_SIMPLE
+SwitchRecv:
+SwitchSend:
+	RET
+ENDIF
+
+
 DmaMode		EQU	0D240h		;:	db RECV_MODE
 SDBUF_PTR	EQU	DmaMode+1	;:	ds  2
 SDBUF_SIZE	EQU	SDBUF_PTR+2	;:	ds  1
 SDBBUF		EQU	SDBUF_SIZE+2	;:	ds  32
-;End
+ENDIF
+ENDIF
+SDBUF2:	ds	2
