@@ -15,7 +15,7 @@ clean:
 	del *.BIN
 	del *.NoiCtx
 
-all: init1.rkl init2.BIN init3.rkl RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl 9918test.rkl sprite.rkl 9918txt.rkl rk60k.rkl bootRom.rkl MON580.rkl sdbiosd.rkl bootd.rkl bootds.rkl sdbiosds.rkl
+all: init1.rkl init2.BIN init3.rkl RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl sprite.rkl rk60k.rkl bootRom.rkl MON580.rkl sdbiosd.rkl bootd.rkl bootds.rkl sdbiosds.rkl
 
 init1.rkl: init1.BIN
 
@@ -107,14 +107,14 @@ sdbiosds.rkl: sdbiosds.bin
 write.rkl: write.bin
 	../makerk/Release/makerk.exe 100 $< $@
 
-9918test.REL: 9918test.asm 9918.asm 9918font.asm
+#9918test.REL: 9918test.asm 9918.asm 9918font.asm
 
-9918test.BIN: 9918test.rel
+#9918test.BIN: 9918test.rel
 
 
-9918test.rkl: 9918test.bin
-	../makerk/Release/makerk.exe 100 $< $@
-	../m80noi/x64/Release/m80noi.exe 9918test.prn
+#9918test.rkl: 9918test.bin
+#	../makerk/Release/makerk.exe 100 $< $@
+#	../m80noi/x64/Release/m80noi.exe 9918test.prn
 
 sprite.REL: sprite.asm tms.asm utility.asm z180.asm
 
@@ -139,7 +139,7 @@ sprite.rkl: sprite.bin
 #bootRom.rkl: bootRom.BIN
 #	../makerk/Release/makerk.exe 8600 $< $@
 
-MON580.REL: MON580.ASM F8X16.asm MonRKRom.asm bootRom.asm sdbiosR.asm SendRcv.asm init2R.asm
+MON580.REL: MON580.ASM F8X16.asm fMsx.asm MonRKRom.asm bootRom.asm sdbiosR.asm SendRcv.asm init2R.asm TMS_DEF.asm
 
 MON580.BIN: MON580.REL
 

@@ -130,10 +130,10 @@
     <None Include="sdbiosds.asm">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="9918def.asm">
+    <None Include="TMS_DEF.ASM">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="TMS_DEF.ASM">
+    <None Include="fMsx.asm">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>

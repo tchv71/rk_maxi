@@ -80,7 +80,6 @@ make all</NMakeReBuildCommandLine>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="9918.asm" />
-    <None Include="9918def.asm" />
     <None Include="9918font.asm" />
     <None Include="9918test.asm" />
     <None Include="9918txt.asm" />
@@ -92,6 +91,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="DmaIo.asm" />
     <None Include="F8X16.asm" />
     <None Include="F8X16EN.asm" />
+    <None Include="fMsx.asm" />
     <None Include="init.asm" />
     <None Include="init1.asm" />
     <None Include="init2.asm" />
