@@ -2873,7 +2873,7 @@ IF 1
 	LD	HL,ScrollRegs
 	CALL	T_SetRegs
 	POP	HL
-	;while (VDPST & 0x80);    // wait for GPU status to be idle
+	;while (VDPST & 1);    // wait for 9938 status to be idle
 SC01:
 	IN	A, (VDP+1)
 	AND	1
