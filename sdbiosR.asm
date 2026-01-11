@@ -29,6 +29,7 @@ VER_BUF		EQU  SDBBUF
 ;----------------------------------------------------------------------------
 
 SdBiosEntry:
+IF 0
 	; Set free memory border
 	;LXI	H, SELF_NAME
 	;CALL	0F833h
@@ -43,7 +44,7 @@ SdBiosEntry:
 	; Line feed
 	lxi	h, aCrLf
 	CALL	F818h
-
+ENDIF
 	; Execute SHELL.RK without command line
 	LXI	H, aShellRk
 	LXI	D, aEmpty
@@ -99,7 +100,7 @@ aHello:		db 13,10,"SDB",0;"SD BIOS V1.1",13,10
 aSdController:  db 0;"SD DMA CONTROLLER ",0
 aCrLf:		db 13,10,0
 aErrorShellRk:  db "fajl ne najden "
-aShellRk:	db "BOOT/SHELL.RK",0
+aShellRk:	db "BOOT/SHELL2.RK",0
 		;db "(c) 04-05-2014 vinxru, 2024 (c) tchv"
 
 ; Код ниже будет затерт ком строкой и собственым именем
@@ -803,6 +804,7 @@ SendDma:
 	CALL	SET_DMAW
 	POP	B
 	POP	D
+	XRA	A
 ENDIF
 	RET
 ELSE

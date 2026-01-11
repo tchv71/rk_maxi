@@ -45,7 +45,6 @@ DEBUG	EQU	ORGB+1009H
 VG_75   EQU	0C000H
 TM9	EQU	0CE00H
 VT_57   EQU	0C600H
-DMA	EQU	VT_57
 VI_53	EQU	0CC00H
 
 SG	EQU	0D800H
@@ -633,7 +632,7 @@ DIR_N:
 	RET	NZ
 	;EX	DE,HL
 	;JP	(HL)
-	JP	Boot2
+	JP	SdBiosEntry;Boot2
 
 TRY_SD:
 	CALL	SD_INIT
@@ -1907,6 +1906,8 @@ IFNDEF VDP
 	LD	HL,VG_75+1
 ELSE
 	CALL	SetVDP
+	POP	hl
+	RET
 ENDIF
 
 P_VG0:
@@ -2033,7 +2034,7 @@ SET_RL:	LD	(RUSLAT),A		; 6 bytes
 
 ; ??????????????????????????????????????????????
 
-	rept	14
+	rept	12
 	defb	0
 	endm
 
@@ -2270,7 +2271,7 @@ DIR_F:
 
 LD_BAK:	RET
 
-if	LD_BAK ne 0FCA4H
+if	LD_BAK ne RABADR + 4A4H 
 	if1
 	.printx	* Internal point 0FCA4H (need for emulator B2M) shifted ! *
 	endif
@@ -2593,7 +2594,7 @@ CHK_F4:	CALL	XF81B			; 12 bytes
 
 	;NOP
 
-if	$ ne 0FE63H
+if	$ ne RABADR + 663H
 	if1
 	.printx	* Internal point FE63 (need for emulator emu80) shifted ! *
 	endif
@@ -2654,10 +2655,6 @@ ELSE
 	LD	BC,SCR_WIDTH * SCR_HEIGHT
 	LD	DE, 0F4h
 	CALL	T_FillWord
-IFDEF	VDP_TEXT_SCROLL
-	XOR	A
-	CALL	SetTextScroll
-ENDIF
 ENDIF
 SCR_START	EQU	(SCR_YOFS SHL 8)+SCR_XOFS
 HOME:	LD	DE, SCR_START
@@ -2874,7 +2871,9 @@ IF 1
 	CALL	T_SetRegs
 	POP	HL
 	;while (VDPST & 1);    // wait for 9938 status to be idle
+	LD	BC,0
 SC01:
+	INC	BC
 	IN	A, (VDP+1)
 	AND	1
 	JP	NZ, SC01
@@ -2946,16 +2945,6 @@ DL02:
 	;POP	BC
 	RET
 ENDIF
-SetTextScroll:
-	;PUSH	BC
-	LD	(ScrollLine), A
-	;LD	C, A
-	;LD	B, T_REG_SCROLL_Y
-	;CALL	T_WriteRegValue
-	;POP	BC
-	RET
-ScrollLine:
-	db	0
 ELSE
 	PUSH	HL
 	PUSH	DE

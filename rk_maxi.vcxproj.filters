@@ -136,5 +136,6 @@
     <None Include="fMsx.asm">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="MON580.PRN" />
   </ItemGroup>
 </Project>

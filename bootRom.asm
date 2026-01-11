@@ -30,7 +30,7 @@ Boot:
 	; Start of any command (this is address bus)
 Boot2:
 	DI
-	CALL	ClearRcvBuf
+	;CALL	ClearRcvBuf
 	
 	;XRA	A	; BOOT command code
 	MVI	A,2
@@ -70,20 +70,7 @@ RecvLoop:
 	;Rst	2
 	CALL	Rst2
 	CPI	STA_OK_READ
-	JNZ	RL01
-	;On exit: HL - run address, DE - entry point, A = 0
-	POP	H
-	PUSH	H
-	INX	H
-	INX	H
-	INX	H
-	MOV	E, M
-	INX	H
-	MOV	D, M
-	POP	H
-	XRA	A
-	RET 
-RL01:
+	JZ	StartExecutable
 	; If MC has readed block without errors, STA_OK_BLOCK will be SendCh
 	CPI	STA_OK_BLOCK
 	JNZ	ERRLOAD
@@ -104,7 +91,8 @@ RL01:
 	JMP	RecvLoop
 ERRLOAD:
 	POP	B ; Clear start address on stack
-	RET
+StartExecutable:
+	RET 
 
 ; Receive word: C - low byte A - high byte
 RecvWordCA:
@@ -117,46 +105,15 @@ Rst1:
 ; Receive byte into À
 
 RecvSD:
-	PUSH	H
 	PUSH	D
 	PUSH	B
-	LXI	H,SDBUF_SIZE
-	MOV	A,M
-	ORA	A
-	JNZ	Recv01
-; Read variable length DMA record - the first packet is 2 bytes length,
-; the second - data with previosly transmitted length
-;DmaReadVariable:
-	LXI	B,4002H
-	LXI	D,SDBBUF
+	LXI	D,SDBUF
+	LXI	B,4001h
+	;RST	3;
 	CALL	SET_DMAW
 	LDAX	D
-	INX	D
-	MOV	C,A
-	LDAX	D
-	INX	D
-	ORI	40H
-	MOV	B,A
-	CALL	SET_DMAW
-	MOV	A,C
-	STA	SDBUF_SIZE
-	XCHG
-	SHLD	SDBUF_PTR
-	XCHG
-Recv01:
-	DCR	M
-	LHLD	SDBUF_PTR
-	MOV	A,M
-	INX	H
-	SHLD	SDBUF_PTR
 	POP	B
 	POP	D
-	POP	H
-	RET
-
-ClearRcvBuf:
-	XRA	A
-	STA	SDBUF_SIZE
 	RET
 ;----------------------------------------------------------------------------
 ; Wait for MC ready
@@ -166,7 +123,16 @@ Rst2:
 	CPI	STA_WAIT
 	JZ	Rst2
 	RET
-	;NOP
+
+;ClearRcvBuf:
+;	XRA	A
+;	STA	BUF_SIZE
+;	RET
+
+SET_DMA2:
+	MOV	A,B
+	ORI	40h
+	MOV	B, A
 Rst3:
 ; Program DMA controller
 
@@ -182,10 +148,25 @@ SET_DMAW:
 	JZ	_VT37
 	MVI	L,8
 	MVI	M,0F4h
-	MVI	L,CHAN*2
-	CALL	INIT_CHAN
+IFDEF CHANNEL0
+	MVI	L,0
+ELSE
+	MVI	L,2
+ENDIF
+	MOV	M,E
+	MOV	M,D
+	INR	L
+	DCX	B
+	MOV	M,C
+	MOV	M,B
+	INX	B
+WAIT_DMA1:
 	MVI	L,8
-	MVI	M,0F5h+CHAN
+IFDEF CHANNEL0
+	MVI	M,0F5H
+ELSE
+	MVI	M,0F6h
+ENDIF
 	JMP	WAIT_DMA
 
 _VT37:
@@ -196,9 +177,20 @@ _VT37:
 	MVI	L,0Ch
 	MOV	M,A
 	MVI	L,0AH
-	MVI	M,4+CHAN ; Stop channel
-	MVI	L,CHAN*2
-	CALL	INIT_CHAN
+IFDEF CHANNEL0
+	MVI	M,4 ; Stop channel 0
+	MVI	L,0
+ELSE
+	MVI	M,5 ; Stop channel 1
+	MVI	L,2
+ENDIF
+	MOV	M,E
+	MOV	M,D
+	INR	L
+	DCX	B
+	MOV	M,C
+	MOV	M,B
+	INX	B
 	MVI	L,0Bh
 	POP	PSW
 	ANI	0C0H
@@ -213,11 +205,21 @@ ENDIF
 	MVI	L,8
 	MVI	M,20h
 	MVI	L,0Ah
-	MVI	M,CHAN	; Start channel
+IFDEF CHANNEL0
+	MVI	M,0
+ELSE
+	MVI	M,1 ; Start channel 1
+ENDIF
+
 	MVI	L,8
+	CALL	WAIT_DMA
 WAIT_DMA:
 	MOV	A,M
-	ANI	CHAN+1
+IFDEF CHANNEL0
+	ANI	1
+ELSE
+	ANI	2
+ENDIF
 	JZ	WAIT_DMA
 	POP	H
 	RET

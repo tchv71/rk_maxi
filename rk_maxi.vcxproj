@@ -101,6 +101,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="MEM2A.ASM" />
     <None Include="MemTest.asm" />
     <None Include="MON580.ASM" />
+    <None Include="MON580.PRN" />
     <None Include="MonRKRom.asm" />
     <None Include="port.asm" />
     <None Include="rk60k.asm" />
