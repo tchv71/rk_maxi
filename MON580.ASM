@@ -6,16 +6,16 @@
 	.Z80
 	aseg
 	ORG     100H
-ORGB		EQU	08000H
+ORGB		EQU	0e000h;08000H
 VDP		EQU	98H
 VDP_TEXT_SCROLL	EQU	1
 USE_DMA		EQU	1
-DMA_SIMPLE	EQU	1
 ;MSX		EQU	1
 ;INT_ENABLE	EQU	1
 
 
 	BASE    EQU	0D700H		; служебные ячейки
+	BASE_W	EQU	BASE-100h
 IFNDEF VDP
 	SA48	EQU	0B6D0H		; 76D0 начало экранной области в режиме 48K
 	SA32	EQU	076D0H		; 76D0 начало экранной области в режиме 32K
@@ -398,8 +398,10 @@ ENDIF
 SetVDP:
 	PUSH	DE
 	PUSH	BC
+	;CALL	T_Reset
+	;CALL	CLS
 	CALL	T_InitialiseText80
-	LD	HL,VG_75+1
+	;LD	HL,VG_75+1
 	POP	BC
 	POP	DE
 	RET
@@ -522,25 +524,6 @@ SD_LDR:
 SD_LDR2:
 	XOR	A
 	RET
-IFNDEF	DMA_SIMPLE
-	.8080
-SwitchSend:
-	PUSH  H
-	PUSH  D
-	PUSH  B
-	XRA	A ; MVI	A,SEND_MODE
-SetMode:
-	STA	DmaMode
-	XRA	A
-	STA	SDBUF_SIZE
-	LXI	H, SDBBUF
-	SHLD	SDBUF_PTR
-	POP	B
-	POP	D
-	POP	H
-	RET
-	.z80
-ENDIF
 ; ??????????????????????????????????????????????
 
 PRMPT:

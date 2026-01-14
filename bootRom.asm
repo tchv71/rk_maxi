@@ -245,13 +245,7 @@ IF 0;($ MOD 128) NE 0
 		DB 0FFh
 	ENDM
 ENDIF
-;     DW 1
-;OUTCH: DS 2
-;Mode: db RECV_MODE
-;RAM		EQU	0D200h
-;BUF_PTR		EQU	RAM;:    ds  2
-;BUF_SIZE	EQU	RAM+2;:   DW  0
-;BUF		EQU	OUTCH;:        ds  2
+
 OUTCH		EQU	SDBBUF;:
 THE_END:
      ;End

@@ -393,7 +393,7 @@ pc10:   @in     FIFO_STATUS   ;read device status
         POP     PSW
         @out    FIFO_DATA     ;transmit char
         RET
-OUTCHAR: DS 1
+OUTCHAR EQU     BASE_W+0;: DS 1
 
 CheckBrk:
         LDA     0C200h

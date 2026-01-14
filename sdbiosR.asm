@@ -84,11 +84,10 @@ PrintVer:
 	;LXI	D, VER_BUF
 	CALL	RecvSD;Block2
 	
-IFDEF DMA_SIMPLE
 	; Вывод версии железа
 	XRA	A
 	STA	SDBUF_SIZE
-ENDIF
+
 	STA	VER_BUF+17+2
 
 	LXI	H, VER_BUF+1+2
@@ -606,12 +605,6 @@ ENDIF
 ; A is corrupted.
 
 RecvWord:
-IFNDEF DMA_SIMPLE
-	CALL	RecvByte
-	MOV	E, A
-	CALL	RecvByte
-	MOV	D, A
-ELSE
 	PUSH	H
 	PUSH	B
 	LXI	D,SDBUF2
@@ -624,7 +617,6 @@ ELSE
 	MOV	D,M
 	POP	B
 	POP	H
-ENDIF
 	RET
 	
 ;----------------------------------------------------------------------------
@@ -632,12 +624,6 @@ ENDIF
 ; A is corrupted.
 
 SendWord:
-IFNDEF DMA_SIMPLE
-	MOV	A, L
-	CALL	SendByte
-	MOV	A, H
-	JMP	SendByte
-ELSE
 	PUSH	D
 	PUSH	B
 	LXI	D, SDBUF2
@@ -649,7 +635,6 @@ ELSE
 	DCX	D
 	LXI	B,8002h
 	JMP	SendDma
-ENDIF
 ;----------------------------------------------------------------------------
 ; Send string
 ; HL - string
@@ -786,14 +771,6 @@ ENDIF
 ; Send byte from A.
 SendByte:
 IFDEF USE_DMA
-IFNDEF DMA_SIMPLE
-	PUSH	H
-	LHLD	BUF_PTR
-	MOV	M,A
-	INX	H
-	SHLD	BUF_PTR
-	POP H
-ELSE
 	PUSH	D
 	PUSH	B
 	LXI	D,SDBUF2
@@ -805,7 +782,6 @@ SendDma:
 	POP	B
 	POP	D
 	XRA	A
-ENDIF
 	RET
 ELSE
 	@out	USER_PORT
@@ -815,20 +791,6 @@ ENDIF
 
 RecvByte:
 IFDEF USE_DMA
-IFNDEF DMA_SIMPLE
-	LDA	BUF_SIZE
-	ORA	A
-	CZ	DmaReadVariable
-	LDA	BUF_SIZE
-	DCR	A
-	STA	BUF_SIZE
-	PUSH	H
-	LHLD	BUF_PTR
-	MOV	A,M
-	INX	H
-	SHLD	BUF_PTR
-	POP	H
-ELSE
 	PUSH	D
 	PUSH	B
 	LXI	D,SDBUF2
@@ -838,7 +800,6 @@ ELSE
 	LDAX	D
 	POP	B
 	POP	D
-ENDIF
 ELSE
 	MVI	A, 20h
 	@out	USER_PORT+1
@@ -847,106 +808,17 @@ ELSE
 	@in	USER_PORT
 ENDIF
 	RET
+
 IFDEF USE_DMA
-IFNDEF DMA_SIMPLE
-;----------------------------------------------------------------------------
-SEND_MODE		EQU 0
-RECV_MODE		EQU 1
-;----------------------------------------------------------------------------
-CHANNEL0 EQU 1
-
-SwitchRecv:
-	PUSH	H
-	PUSH	D
-	PUSH	B
-	LDA	DmaMode
-	ORA	A	; CPI SEND_MODE
-	JNZ	RM01
-	; Flush send buffer
-	LXI	H,-SDBBUF
-	XCHG
-	LHLD	SDBUF_PTR
-	DAD	D
-	MOV	A,H
-	ORA	L
-	JZ	 RM01
-	XCHG
-	LXI	H,SDBBUF-2
-	MOV	M,E
-	INX	H
-	MOV	M,D
-	DCX	H
-	XCHG
-	LXI	B,8002h
-	;RST	3
-	CALL	SET_DMAW
-	LDAX	D
-	INX	D
-	MOV	C,A
-	LDAX	D
-	INX	D
-	ORI	80H
-	MOV	B,A
-	;RST	3
-	CALL	SET_DMAW
-RM01:
-	MVI	A, RECV_MODE
-	JMP	SetMode
-SwitchSend:
-	PUSH	H
-	XRA	A ; MVI   A,SEND_MODE
-SetMode:
-	STA	Mode
-	XRA	A
-	STA	BUF_SIZE
-	LXI	H, BUF
-	SHLD	BUF_PTR
-	;MVI	C,0
-	POP	H
-	RET
-
-; Read variable length DMA record - the first packet is 2 bytes length,
-; the second - data with previosly transmitted length
-DmaReadVariable:
-	PUSH	D
-	PUSH	B
-	LXI	B,4002H
-	LXI	D,SDBUF2
-	;RST	3
-	CALL	SET_DMAW
-	LDAX	D
-	INX	D
-	MOV	C,A
-	LDAX	D
-	INX	D
-	ORI	40H
-	MOV	B,A
-	CALL	SET_DMAW
-	MOV	A,C
-	STA	BUF_SIZE
-	;CPI	16
-	;JNC	$
-	;MOV	A,B
-	;ANI	3Fh
-	;JNZ	$
-	XCHG
-	SHLD	BUF_PTR
-	XCHG
-	POP	B
-	POP	D
-	RET
-
-ELSE ; DMA_SIMPLE
 SwitchRecv:
 SwitchSend:
 	RET
-ENDIF
 
 
 DmaMode		EQU	0D240h		;:	db RECV_MODE
-SDBUF_PTR	EQU	DmaMode+1	;:	ds  2
-SDBUF_SIZE	EQU	SDBUF_PTR+2	;:	ds  1
+;SDBUF_PTR	EQU	DmaMode+1	;:	ds  2
+SDBUF_SIZE	EQU	DmaMode+1	;:	ds  1
 SDBBUF		EQU	SDBUF_SIZE+2	;:	ds  32
 ENDIF
 ENDIF
-SDBUF2:	ds	2
+SDBUF2		EQU	SDBBUF+32;:	ds	2
