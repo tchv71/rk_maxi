@@ -114,7 +114,7 @@ CHSUM	EQU	BASE+57H
 FLDR	EQU	BASE+6BH	; имя папки 'TAPE/'
 COMBUF	EQU	BASE+70H        ; буфер ввода директивы
 
-STACK	EQU	BASE;+100H	; стек монитора
+STACK	EQU	BASE+100H	; стек монитора
 
 
 PORT_A		EQU	KBDPPA
@@ -1191,7 +1191,7 @@ AE1:	LD	A,(HL)
 	JP	Z,AE2
 	INC	HL
 	LD	A,L
-	CP	low COMBUF+8
+	CP	low COMBUF+9
 	JP	NZ,AE1
 	RET
 AE2:	LD	DE,EXT
