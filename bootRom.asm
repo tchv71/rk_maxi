@@ -42,7 +42,9 @@ IF 1
 	CALL	SendString
 	POP	H
 ENDIF
+IFNDEF USE_DMA
 	CALL	SwitchRecv
+ENDIF
 	; This is BOOT command answer
 	;Rst	2
 	CALL	Rst2
@@ -246,7 +248,7 @@ IF 0;($ MOD 128) NE 0
 	ENDM
 ENDIF
 
-OUTCH		EQU	SDBBUF;:
+;OUTCH		EQU	SDBBUF;:
 THE_END:
      ;End
 

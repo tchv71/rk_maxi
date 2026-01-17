@@ -78,15 +78,18 @@ PrintVer:
 	;  оманда получени€ версии
 	MVI	A, 1
 	CALL	StartCommand	; Ћишний такт в котором пропустим версию
+
+IFNDEF USE_DMA
 	CALL	SwitchRecv
+ENDIF
 	
 	; ѕолучаем версию набора команд и текст
 	;LXI	D, VER_BUF
 	CALL	RecvSD;Block2
 	
 	; ¬ывод версии железа
-	XRA	A
-	STA	SDBUF_SIZE
+	;XRA	A
+	;STA	SDBUF_SIZE
 
 	STA	VER_BUF+17+2
 
@@ -99,13 +102,13 @@ aHello:		db 13,10,"SDB",0;"SD BIOS V1.1",13,10
 aSdController:  db 0;"SD DMA CONTROLLER ",0
 aCrLf:		db 13,10,0
 aErrorShellRk:  db "fajl ne najden "
-aShellRk:	db "BOOT/SHELL2.RK",0
-		;db "(c) 04-05-2014 vinxru, 2024 (c) tchv"
+aShellRk:	db "BOOT/SHELL.RK",0
+		;db "(c) 04-05-2014 vinxru, 2024-25 (c) tchv"
 
 ;  од ниже будет затерт ком строкой и собственым именем
 
-SELF_NAME	EQU $-512 ; путь (буфер 256 байт)
-CMD_LINE	EQU $-256 ; командана€ строка 256 байт
+SELF_NAME	EQU 0d000h;$-512 ; путь (буфер 256 байт)
+CMD_LINE	EQU SELF_NAME+256; $-256 ; командана€ строка 256 байт
 
 ;----------------------------------------------------------------------------
 ; SD BIOS resident part
@@ -196,8 +199,10 @@ CmdFind:
 	XCHG
 	CALL	SendWord
 
+IFNDEF USE_DMA
 	; Switch to receive mode
 	CALL	SwitchRecv
+ENDIF
 
 	; Counter
 	LXI	H, 0
@@ -310,8 +315,10 @@ CmdRead:
 	; Block size
 	CALL	SendWord	; HL-size
 
+IFNDEF USE_DMA
 	; Switch to receive mode
 	CALL	SwitchRecv
+ENDIF
 
 	; Block receiving. On enter BC - address, HL - received length
 IFDEF USE_DMA
@@ -377,8 +384,10 @@ ENDIF
 	; Block size MC may receive in DE
 	CALL	RecvWord
 
+IFNDEF USE_DMA
 	; Switch to send mode
 	CALL	SwitchSend
+ENDIF
 
 	; Block transfer. Address in BC, length in DE.
 CmdWriteFile1:
@@ -412,8 +421,10 @@ CmdMove:
 	CPI	STA_OK_WRITE
 	RNZ;	EndCommand
 
+IFNDEF USE_DMA
 	; Switch to send mode
 	CALL	SwitchSend
+ENDIF
 
 	; File name
 	XCHG
@@ -497,10 +508,9 @@ IFNDEF USE_DMA
 ENDIF
 
 StartCommand1:
+IFNDEF USE_DMA
 	; Send mode (release the bus) and init HL
 	CALL	SwitchRecv
-
-IFNDEF USE_DMA
 	; Ќачало любой команды (это шина адреса)
 	;LXI	H, USER_PORT+1
 	;MVI	M,0
@@ -556,8 +566,10 @@ ENDIF
 	CPI	STA_OK_DISK
 	JNZ	StartCommandErr2
 
+IFNDEF USE_DMA
 	; Switch to send mode
 	CALL	SwitchSend
+ENDIF
 
 	POP	PSW
 	POP	H
@@ -662,7 +674,9 @@ ENDIF
 ; Switch to receive mode and wait for MC ready
 
 SwitchRecvAndWait:
+IFNDEF USE_DMA
 	CALL	SwitchRecv
+ENDIF
 
 ;----------------------------------------------------------------------------
 ; Wait for MC ready.
@@ -810,15 +824,11 @@ ENDIF
 	RET
 
 IFDEF USE_DMA
-SwitchRecv:
-SwitchSend:
-	RET
 
-
-DmaMode		EQU	0D240h		;:	db RECV_MODE
+;DmaMode		EQU	BASE_W+1	;:	db RECV_MODE
 ;SDBUF_PTR	EQU	DmaMode+1	;:	ds  2
-SDBUF_SIZE	EQU	DmaMode+1	;:	ds  1
-SDBBUF		EQU	SDBUF_SIZE+2	;:	ds  32
+;SDBUF_SIZE	EQU	BASE_W+1	;:	ds  1
+SDBBUF		EQU	BASE_W+1	;:	ds  32
 ENDIF
 ENDIF
 SDBUF2		EQU	SDBBUF+32;:	ds	2

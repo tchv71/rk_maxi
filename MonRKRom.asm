@@ -396,7 +396,7 @@ pc10:   @in     FIFO_STATUS   ;read device status
 OUTCHAR EQU     BASE_W+0;: DS 1
 
 CheckBrk:
-        LDA     0C200h
+        LDA     0C202h
         ANI     ?Ctrl+?Shift
         RET
 ;
@@ -409,7 +409,7 @@ TSTG:   DB      14                      ;2: PROCESSOR TYPE = 8085
         DW      0                       ;5,6: BOTTOM OF PAGED MEM (none)
         DW      0                       ;7,8: TOP OF PAGED MEM (none)
         DB      B1-B0                   ;9 BREAKPOINT INSTRUCTION LENGTH
-B0:     RST     6                       ;10+ BREKAPOINT INSTRUCTION
+B0:     RST     6                       ;10+ BREAKPOINT INSTRUCTION
 B1:     DB     "NoICE 8080 monitor V3.1" ;DESCRIPTION, ZERO
         DB      0
 TSTG_SIZE EQU   $ - TSTG                ;SIZE OF STRING
@@ -461,7 +461,7 @@ NOTBP:  JMP     ENTER_MON       ;HL POINTS AT BREAKPOINT OPCODE
 ;===========================================================================
 ;  Main loop:  wait for command frame from master
 MAIN:   CALL    CheckBrk
-        JZ      ORGB+1886Ch
+        JZ      ORGB+186Ch
         LXI     SP,MONSTACK     ;CLEAN STACK IS HAPPY STACK
         LXI     H,COMBUF_        ;BUILD MESSAGE HERE
 ;

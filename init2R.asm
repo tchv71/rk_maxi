@@ -143,17 +143,6 @@ LOOP:
 ;14	- 0CA00h
 ;15	- 0F700h - RK60K Ports
 MAP:	DB	1,5,3fh,5,40h,15h,40h,13
-IF 0
-	DB	2,2  ; 0C000h - ВГ75
-	DB	2,0  ; 0C200h - ВВ55 - 1
-	DB	2,1  ; 0C400h - ВВ55 - 2
-	DB	2,7  ; 0C600h - ВТ57
-	DB	2,8  ; 0C800h - ВИ53 - 2
-	DB	2,14 ; 0CA00h - VDP TMS9918A
-	DB	2,6  ; 0CC00h - ВИ53 - 1
-	DB	2,11 ; 0CE00h - ТМ9  (Palmira Control Byte)
-	DB	8,13+10h,8,10,30,4,0
-ELSE
 	DB	1,2  ; 0C000h - ВГ75
 	DB	1,9  ; 0C100h - SD_CNTR - контроллер SD-карточки
 	DB	1,0  ; 0C200h - ВВ55 - 1
@@ -166,7 +155,7 @@ ELSE
 	DB	2,6  ; 0CC00h - ВИ53 - 1
 	DB	2,11 ; 0CE00h - ТМ9  (Palmira Control Byte)
 	DB	8,13+10h,8,10,30,4,0
-ENDIF
+
 APOGEE:
 	DB	"APOGEE.RKL"
 EMPTY:	DB	0
