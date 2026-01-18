@@ -11,7 +11,7 @@ VDP_TEXT_SCROLL	EQU	1
 USE_DMA		EQU	1
 ;MSX		EQU	1
 ;INT_ENABLE	EQU	1
-;RAM		EQU	1
+RAM		EQU	1
 IFDEF	RAM
 ORGB		EQU	08000H
 ELSE
@@ -2646,6 +2646,43 @@ IF 0
 	LD	DE, 0F4h
 	CALL	T_FillWord
 ELSE
+IF 1
+	.8080
+	PUSH	H
+	LXI	B, 0
+	CALL	Cmd_HMMV
+	LXI	B, 96*256 + 0F4h
+	CALL	Cmd_HMMV
+	POP	H
+	RET
+
+Cmd_HMMV:
+	MOV	A,B
+	STA	_DY+1
+	MOV	A,C
+	STA	_CLR+1
+	LXI	H, ScrClrRegs
+	CALL	T_SetRegs
+	JMP	WAIT_VDP
+	.z80
+
+ScrClrRegs:
+	DB	36, 0		; DX
+	DB	37, 0		; DX
+_DY:
+	DB	38, 0		; DY
+	DB	39, 0		; DY
+	DB	40, LOW(4*128)	; NX
+	DB	41, HIGH(4*128)	; NX
+	DB	42, 19;15		; NY
+	DB	43, 0		; NY
+_CLR:
+	DB	44, '*'		; CLR
+	DB	45,0
+	DB	46,0C0h		; HMMV command
+	DB	0Fh,2
+	DB	0FFh
+ELSE
 	LD	BC,0150h
 	CALL	T_WriteRegValue
 
@@ -2661,6 +2698,7 @@ ELSE
 
 	LD	BC,0154h
 	CALL	T_WriteRegValue
+ENDIF
 ENDIF
 ENDIF
 SCR_START	EQU	(SCR_YOFS SHL 8)+SCR_XOFS
@@ -2878,6 +2916,7 @@ IF 1
 	CALL	T_SetRegs
 	POP	HL
 	;while (VDPST & 1);    // wait for 9938 status to be idle
+WAIT_VDP:
 	LD	BC,0
 SC01:
 	INC	BC
