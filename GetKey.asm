@@ -33,12 +33,14 @@ RlPressed:
 	CALL	XF81B
 	CP	L
 	LD	L,A
-	JP	Z,AFE2A
+	JP	Z,TheSameKey
 AFE1A:	LD	A,1
 	LD	(APVFLG),A
-	LD	H,0CH*2		; NB число опросов, чтобы зафиксировать код
-AFE21:	XOR	A
-AFE22:	LD	(LAST_K),HL
+	LD	H,0CH		; NB число опросов, чтобы зафиксировать код
+WaitKey:
+	XOR	A
+SetKbdFlg:
+	LD	(LAST_K),HL
 	POP	HL
 	LD	(KBDFLG),A
 	RET
@@ -150,11 +152,23 @@ AFEF3:	LD	A,H			; 7 bytes
 	JP	AFEFE
 
 ; ??????????????????????????????????????????????
+ReptVal	EQU	3
 
-AFE2A:	DEC	H			; в рег.A=код клав, в рег.H- COUNT
-	JP	NZ,AFE21		; 39 bytes
+TheSameKey:
+	PUSH	HL
+	LD	HL, Rept
+	DEC	(HL)
+	POP	HL
+	JP	NZ, WaitKey
+	PUSH	AF
+	LD	A,ReptVal
+	LD	(Rept), A
+	POP	AF
+
+	DEC	H			; в рег.A=код клав, в рег.H- COUNT
+	JP	NZ,WaitKey		; 39 bytes
 	INC	A
-	JP	Z,AFE22			; если код FF, то сброс флагов
+	JP	Z,SetKbdFlg			; если код FF, то сброс флагов
 	INC	A
 	JP	Z,KEY_FE		; если код FE (RUSLAT)
 
@@ -170,8 +184,9 @@ AFE2A:	DEC	H			; в рег.A=код клав, в рег.H- COUNT
 	JP	Z,AFE4C
 	LD	H,18H			; скорость повтора
 AFE4C:	LD	A,0FFH
-	JP	AFE22
+	JP	SetKbdFlg
 
+rept:	Db	ReptVal
 ; ??????????????????????????????????????????????
 
 AFF1A:	LD	A,(RUSLAT)		; 33 bytes
@@ -233,7 +248,9 @@ SET_RL:	LD	(RUSLAT),A		; 6 bytes
 RUSLAT:	DS	1	; допустимо только 0 или FF
 KBDFLG:	DS	1	; если =0, то есть символ в SYMBUF
 LAST_K:	DS	2	; эти 2 байта должны следовать подряд
+			; символ
+			; число повторов
 COUNT:	DS	1	; счётчик опросов (вначале 15)
-APVFLG:	DS	1	; флаг автоповтора
+APVFLG:	DS	1	; флаг автоповтора 1 - wait for key; other - repeat
 
 	END

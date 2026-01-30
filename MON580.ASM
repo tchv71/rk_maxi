@@ -11,7 +11,7 @@ VDP_TEXT_SCROLL	EQU	1
 USE_DMA		EQU	1
 ;MSX		EQU	1
 ;INT_ENABLE	EQU	1
-;RAM		EQU	1
+RAM		EQU	1
 ;PROFILE		EQU	1
 
 IFDEF	RAM
@@ -2388,11 +2388,23 @@ AFEC3:	DEC	L
 	RET
 
 ; ??????????????????????????????????????????????
+ReptVal	EQU	2
 
-AFE2A:	DEC	H			; в рег.A=код клав, в рег.H- COUNT
-	JP	NZ,AFE21		; 39 bytes
+TheSameKey:
+	PUSH	HL
+	LD	HL, Rept
+	DEC	(HL)
+	POP	HL
+	JP	NZ, WaitKey
+	PUSH	AF
+	LD	A,ReptVal
+	LD	(Rept), A
+	POP	AF
+
+	DEC	H			; в рег.A=код клав, в рег.H- COUNT
+	JP	NZ,WaitKey		; 39 bytes
 	INC	A
-	JP	Z,AFE22			; если код FF, то сброс флагов
+	JP	Z,SetKbdFlg			; если код FF, то сброс флагов
 	INC	A
 	JP	Z,KEY_FE		; если код FE (RUSLAT)
 
@@ -2408,8 +2420,9 @@ AFE2A:	DEC	H			; в рег.A=код клав, в рег.H- COUNT
 	JP	Z,AFE4C
 	LD	H,18H			; скорость повтора
 AFE4C:	LD	A,0FFH
-	JP	AFE22
+	JP	SetKbdFlg
 
+rept	EQU	BASE+46H
 ; ??????????????????????????????????????????????
 
 ; После 15 вызовов KBD_STATUS при нажатой клавише выставляется флаг KBDFLG
@@ -2417,21 +2430,27 @@ AFE4C:	LD	A,0FFH
 KBD_STATUS:
 	LD	A,(PORT_C)		; 38 bytes
 	RLA
-	JP	NC,AFE0E	; если нажат RUS/LAT
+	JP	NC,RlPressed	; если нажат RUS/LAT
 	LD	A,(KBDFLG)
 	OR	A
 	RET	NZ		; если в SYMBUF уже есть символ
-AFE0E:	PUSH	HL
+RlPressed:
+	PUSH	HL
 	LD	HL,(LAST_K)
 	CALL	XF81B
 	CP	L
 	LD	L,A
-	JP	Z,AFE2A
+	JP	Z,TheSameKey
 AFE1A:	LD	A,1
 	LD	(APVFLG),A
-	LD	H,0CH*2		; NB число опросов, чтобы зафиксировать код
-AFE21:	XOR	A
-AFE22:	LD	(LAST_K),HL
+	LD	A,ReptVal
+	LD	(Rept), A
+
+	LD	H,0CH		; число опросов, чтобы зафиксировать код
+WaitKey:
+	XOR	A
+SetKbdFlg:
+	LD	(LAST_K),HL
 	POP	HL
 	LD	(KBDFLG),A
 	RET
