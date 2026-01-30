@@ -92,11 +92,13 @@ make all</NMakeReBuildCommandLine>
     <None Include="F8X16.asm" />
     <None Include="F8X16EN.asm" />
     <None Include="fMsx.asm" />
+    <None Include="GetKey.asm" />
     <None Include="init.asm" />
     <None Include="init1.asm" />
     <None Include="init2.asm" />
     <None Include="init2R.asm" />
     <None Include="init3.asm" />
+    <None Include="KeyTst.asm" />
     <None Include="Makefile" />
     <None Include="MEM2A.ASM" />
     <None Include="MemTest.asm" />

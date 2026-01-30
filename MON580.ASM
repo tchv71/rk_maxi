@@ -11,7 +11,9 @@ VDP_TEXT_SCROLL	EQU	1
 USE_DMA		EQU	1
 ;MSX		EQU	1
 ;INT_ENABLE	EQU	1
-RAM		EQU	1
+;RAM		EQU	1
+;PROFILE		EQU	1
+
 IFDEF	RAM
 ORGB		EQU	08000H
 ELSE
@@ -140,7 +142,7 @@ SCR_VIS_WIDTH	EQU	80
 SCR_XOFS	EQU	0
 SCR_HEIGHT	EQU	30;24
 SCR_YOFS	EQU	0
-STRBUF		EQU	BASE+90h
+STRBUF		EQU	0D000h
 ENDIF
 ; ??????????????????????????????????????????????
 
@@ -1375,7 +1377,7 @@ CR2:	CALL	RST_18
 	JP	COUT_C		; +9
 	JP	WRBYTE		; +C
 	JP	COUT_C		; +F   это д.быть PRINT
-	JP	STATUS		; +12
+	JP	KBD_STATUS	; +12
 	JP	HEX_A 		; +15
 	JP	MSGH  		; +18
 	JP	XF81B 		; +1B
@@ -1604,9 +1606,10 @@ endif
 
 ; ??????????????????????????????????????????????
 
-AFE97:	PUSH	HL			; 27 bytes
+KbdScan:
+	PUSH	HL			; 27 bytes
 	LD	HL,7 shl 8 + 1
-AFE9C:	LD	A,L
+KbdS01:	LD	A,L
 	RRCA
 	LD	L,A
 	CPL
@@ -1614,10 +1617,11 @@ AFE9C:	LD	A,L
 	LD	A,(PORT_B)
 	CPL
 	OR	A
-	JP	NZ,AFEB3
+	JP	NZ,KbdKeyPress
 	DEC	H
-	JP	P,AFE9C
-AFEAF:	LD	A,0FFH
+	JP	P,KbdS01
+KbdSNoKey:
+	LD	A,0FFH
 	POP	HL
 	RET
 
@@ -1636,7 +1640,7 @@ AFE7D:
 	LD	(PORT_CTRL),A
 	LD	A,(PORT_B)
 	INC	A
-	JP	NZ,AFE97
+	JP	NZ,KbdScan
 	DEC	A
 	RET
 
@@ -1914,8 +1918,8 @@ P_VG0:
 
 	INC     HL		; адрес VG_75+1
 	LD	(HL),27H	; start display command
-	LD	A,(HL)		; read status
-AFAE1:	LD	A,(HL)		; read status
+	LD	A,(HL)		; read KBD_STATUS
+AFAE1:	LD	A,(HL)		; read KBD_STATUS
 	AND	20H		; mask 'Interrupt request flag'
 	JP	Z,AFAE1		; ждем конца строки
 	LD	HL,VT_57+8
@@ -2273,7 +2277,7 @@ COUT_C:	PUSH	HL
 	PUSH	BC
 	PUSH	AF
 
-	CALL	STATUS
+	CALL	KBD_STATUS
 	LD	HL,TOBACK
 	PUSH	HL
 	LD	HL,(POSX)
@@ -2353,13 +2357,15 @@ TABK2:	defb	09,0AH,0DH,7FH,08H,19H,18H,1AH	; 8 bytes
 
 ; ??????????????????????????????????????????????
 
-AFEB3:	LD	L,20H			; 47 bytes
-AFEB5:	LD	A,(PORT_B)
+KbdKeyPress:
+	LD	L,20H			; 47 bytes
+PressLoop:
+	LD	A,(PORT_B)
 	CPL
 	OR	A
-	JP	Z,AFEAF
+	JP	Z,KbdSNoKey
 	DEC	L
-	JP	NZ,AFEB5
+	JP	NZ,PressLoop
 	LD	L,8
 AFEC3:	DEC	L
 	RLCA
@@ -2406,16 +2412,10 @@ AFE4C:	LD	A,0FFH
 
 ; ??????????????????????????????????????????????
 
-; После 15 вызовов STATUS при нажатой клавише выставляется флаг KBDFLG
+; После 15 вызовов KBD_STATUS при нажатой клавише выставляется флаг KBDFLG
 
-STATUS:
-IF 0
-	XOR	A
-	RET
-	NOP
-ELSE
+KBD_STATUS:
 	LD	A,(PORT_C)		; 38 bytes
-ENDIF
 	RLA
 	JP	NC,AFE0E	; если нажат RUS/LAT
 	LD	A,(KBDFLG)
@@ -2429,7 +2429,7 @@ AFE0E:	PUSH	HL
 	JP	Z,AFE2A
 AFE1A:	LD	A,1
 	LD	(APVFLG),A
-	LD	H,0CH		; число опросов, чтобы зафиксировать код
+	LD	H,0CH*2		; NB число опросов, чтобы зафиксировать код
 AFE21:	XOR	A
 AFE22:	LD	(LAST_K),HL
 	POP	HL
@@ -2590,7 +2590,7 @@ if	$ ne RABADR + 663H
 endif
 
 CONIN:	CALL	EMU_CLS
-CONIN2:	CALL	STATUS
+CONIN2:	CALL	KBD_STATUS
 	OR	A
 	JP	Z,CONIN2
 	XOR	A
@@ -2647,37 +2647,51 @@ IF 0
 	CALL	T_FillWord
 ELSE
 IF 1
-	.8080
-	PUSH	H
-	LXI	B, 0
+	LD	BC, 38*256 + 0
+	LD	DE, 44*256 + 0
 	CALL	Cmd_HMMV
-	LXI	B, 96*256 + 0F4h
+	LD	BC, 38*256+96
+	LD	DE, 44*256 + 0F4h
 	CALL	Cmd_HMMV
-	POP	H
+	LD	HL,T_T80_VRAM_NAME_ADDRESS
+	LD	DE, 0
 	RET
 
 Cmd_HMMV:
-	MOV	A,B
-	STA	_DY+1
-	MOV	A,C
-	STA	_CLR+1
-	LXI	H, ScrClrRegs
+	CALL	T_WriteRegValue
+	LD	B,D
+	LD	C,E
+	CALL	T_WriteRegValue
+	LD	HL, ScrClrRegs
 	CALL	T_SetRegs
-	JMP	WAIT_VDP
-	.z80
+
+WAIT_VDP:
+SC00:
+	;IN	A, (VDP+1)
+	;AND	1
+	;JP	Z, SC00
+	LD	BC,0
+SC01:
+	INC	BC
+	IN	A, (VDP+1)
+	AND	1
+	JP	NZ, SC01
+
+
+	;VDP_SET_REGISTER(0x0f,0); // KBD_STATUS register to read = SR0
+	LD	BC,0F00h
+	JP	T_WriteRegValue
 
 ScrClrRegs:
 	DB	36, 0		; DX
 	DB	37, 0		; DX
-_DY:
-	DB	38, 0		; DY
+	;DB	38, 0		; DY
 	DB	39, 0		; DY
 	DB	40, LOW(4*128)	; NX
 	DB	41, HIGH(4*128)	; NX
 	DB	42, 19;15		; NY
 	DB	43, 0		; NY
-_CLR:
-	DB	44, '*'		; CLR
+	;DB	44, '*'		; CLR
 	DB	45,0
 	DB	46,0C0h		; HMMV command
 	DB	0Fh,2
@@ -2873,6 +2887,17 @@ VDP_SET_REGISTER macro reg,val
 	ENDM
 
 SCROLL:
+IFDEF	PROFILE
+	LD	A, 111b
+	LD	(PORT_CTRL),A
+ENDIF
+	CALL	SCROLL2
+IFDEF	PROFILE
+	LD	A, 110b
+	LD	(PORT_CTRL),A
+ENDIF
+	RET
+SCROLL2:
 IFNDEF	VDP
 	PUSH	HL
 	PUSH	DE
@@ -2915,19 +2940,8 @@ IF 1
 	LD	HL,ScrollRegs
 	CALL	T_SetRegs
 	POP	HL
-	;while (VDPST & 1);    // wait for 9938 status to be idle
-WAIT_VDP:
-	LD	BC,0
-SC01:
-	INC	BC
-	IN	A, (VDP+1)
-	AND	1
-	JP	NZ, SC01
-
-
-	;VDP_SET_REGISTER(0x0f,0); // status register to read = SR0
-	LD	BC,0F00h
-	JP	T_WriteRegValue
+	;while (VDPST & 1);    // wait for 9938 KBD_STATUS to be idle
+	JP	WAIT_VDP
 
 ScrollRegs:
 	DB	34,1
@@ -2996,7 +3010,7 @@ ELSE
 	PUSH	DE
 	PUSH	BC
 
-	LD	BC, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INC_ONE OR (T_REG_1 SHL 8) 
+	LD	BC, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR (T_REG_1 SHL 8) 
 	CALL	T_WriteRegValue
 
 	LD	HL,(SYMADR)
@@ -3032,7 +3046,7 @@ DL01:
 	LD	DE,0;4Fh
 	CALL	T_FillWord
 
-	LD	BC, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR (T_REG_1 SHL 8)
+	LD	BC, T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INTERLEAVE_COLOR OR (T_REG_1 SHL 8)
 	CALL	T_WriteRegValue
 
 	POP	BC

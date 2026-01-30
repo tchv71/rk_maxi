@@ -137,5 +137,11 @@
       <Filter>Source Files</Filter>
     </None>
     <None Include="MON580.PRN" />
+    <None Include="GetKey.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="KeyTst.asm">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -81,6 +81,7 @@ ON_DC:
 	STA	0C203H
 	LDA	0C202H
 	ANI	060H
+	JZ	ROM2
 	MOV	C,A
 	ANI	040H
 	LXI	D,APOGEE
@@ -100,6 +101,15 @@ LOAD:
 	; Управление будет тут если вызов не удался
 	JMP	INTR_INIT ; 
 
+ROM2:	IN	-1
+	MVI	A,0A0H
+	OUT	-1
+
+	MVI	A,13+10h
+	OUT	0FEh
+
+	JMP	PROG_PAGE + ROM2P - BEGPRO
+
 EXEC_A:
 	PUSH	H
 	MVI	A,0
@@ -113,7 +123,23 @@ BEGPRO:
 	DCR B
 	RZ
 	JMP PROG_PAGE
+
+ROM2P:	LXI	H,PROG_PAGE+1
+	MVI	M,0E0h
+	MVI	A,24h
+	MVI	B,30
+	CALL	PROG_PAGE
+	OUT	0FEh
+	OUT	0FFh
+
+
+	IN	-1
+	MVI	A,080H
+	OUT	-1
+	JMP	0F800h
+
 ENDPRO:
+
 LOOP:
 	LDAX	D
 	ORA	A
@@ -145,7 +171,7 @@ LOOP:
 MAP:	DB	1,5,3fh,5,40h,15h,40h,13
 	DB	1,2  ; 0C000h - ВГ75
 	DB	1,9  ; 0C100h - SD_CNTR - контроллер SD-карточки
-	DB	1,0  ; 0C200h - ВВ55 - 1
+	DB	1,0;9  ; 0C200h - ВВ55 - 1
 	DB	1,12 ; 0C300h - PI_SD
 	DB	1,1  ; 0C400h - ВВ55 - 2
 	DB	1,14 ; 0C500h - VDP TMS9918A
