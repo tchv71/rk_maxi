@@ -172,6 +172,7 @@ NXT_S:	PUSH	BC
 	POP	BC
 	RET
 
+IFDEF VDP
 T_ShAddrReadBytes:
 	PUSH	HL
 	PUSH	BC
@@ -404,18 +405,23 @@ IFDEF INT_ENABLE
 ENDIF
 	OUT	(VDP+1),A
 	RET
+ENDIF
 
 SetVDP:
 	PUSH	DE
 	PUSH	BC
 	;CALL	T_Reset
-	;CALL	CLS
+IFDEF VDP
 	CALL	T_InitialiseText80
-	;LD	HL,VG_75+1
+ELSE
+	CALL	CLS
+	LD	HL,VG_75+1
+ENDIF
 	POP	BC
 	POP	DE
 	RET
 
+IFDEF VDP
 T_InitialiseText80:
 	;CALL	T_Reset
 	PUSH	AF
@@ -498,6 +504,7 @@ ELSE
 	;include F8X16EN.ASM
 ENDIF
 tmsFontEnd:
+ENDIF
 	;rept	0E00H
 	;if	(LOW($) MOD 16 ne 0)
 	;	defb	255
@@ -509,7 +516,7 @@ tmsFontEnd:
 	include MonRkRom.asm
 	include sdbiosR.asm
 	.z80
-	rept	0400H
+	rept	0A00H
 	if	$ ne ORGB+1000H
 		defb	255
 	endif
@@ -593,7 +600,7 @@ CHK_CS:
 	JP	NZ,MDINIT
 	LD	A,C
 	CP	L
-	RET	Z
+	;RET	Z
 MDINIT:	LD	A,80H
 	LD	(TM9VAL),A
 	XOR	A
@@ -603,6 +610,9 @@ MDINIT:	LD	A,80H
 	LD	(SIG),HL
 	LD	HL,SA48
 	LD	(SCRBEG),HL
+	CALL	HOME
+	LD	(EK_ADR), HL
+
 CALC_CS:	
 	LD	HL,MODE
 	LD	DE,CHSUM-1
@@ -1903,6 +1913,7 @@ ELSE
 	RET
 ENDIF
 
+
 P_VG0:
 	LD	(HL),0		; reset commando
 	DEC	HL		; адрес VG_75
@@ -1911,7 +1922,7 @@ P_VG0:
 	LD	(HL),0FFH	; 1111.1110  
 				; 9+1 линий в знакоместе, 9 +1 линия подчерк.
  
-	LD	(HL),0D8H	; 1.0.01.1000 без смещ.
+	LD	(HL),0d2H;0D8H	; 1.0.01.1000 без смещ.
 				; курсор - мигающая линия подчеркивания
 				; атрибуты отображать пробелом
 	 			; 18 тактов - длина обр хода в стр.
@@ -1931,7 +1942,7 @@ AFAE1:	LD	A,(HL)		; read KBD_STATUS
 	LD	(HL),A		; 076H
 	INC	L		; адрес VT_57+5
 	LD	(HL),23H
-	LD	(HL),49H
+	LD	(HL),89H
 	LD	L,8		; VT_57+8
 	LD	(HL),0A4H
 	POP	HL
@@ -2030,6 +2041,9 @@ SET_RL:	LD	(RUSLAT),A		; 6 bytes
 	rept	12
 	defb	0
 	endm
+IFNDEF	VDP
+	DS	2
+ENDIF
 
 JJJ2:	CALL	CHXHL@
 
@@ -2391,20 +2405,7 @@ AFEC3:	DEC	L
 ReptVal	EQU	2
 
 TheSameKey:
-	PUSH	HL
-	LD	HL, Rept
-	DEC	(HL)
-	POP	HL
-	JP	NZ, WaitKey
-	PUSH	AF
-	LD	A,ReptVal
-	LD	(Rept), A
-	POP	AF
-
-	DEC	H			; в рег.A=код клав, в рег.H- COUNT
-	JP	NZ,WaitKey		; 39 bytes
-	INC	A
-	JP	Z,SetKbdFlg			; если код FF, то сброс флагов
+	JP	TSK2
 	INC	A
 	JP	Z,KEY_FE		; если код FE (RUSLAT)
 
@@ -2674,8 +2675,6 @@ IF 1
 	CALL	Cmd_HMMV
 	LD	HL,T_T80_VRAM_NAME_ADDRESS
 	LD	DE, 0
-	RET
-
 Cmd_HMMV:
 	CALL	T_WriteRegValue
 	LD	B,D
@@ -2683,7 +2682,7 @@ Cmd_HMMV:
 	CALL	T_WriteRegValue
 	LD	HL, ScrClrRegs
 	CALL	T_SetRegs
-
+	JP	HOME
 WAIT_VDP:
 SC00:
 	;IN	A, (VDP+1)
@@ -2828,8 +2827,8 @@ AFB35:	PUSH	HL
 CLRMON:
 	CALL	PUSK_VG
 
-	LD	HL,BASE
-	LD	C,L			; 0
+	LD	HL,BASE+2
+	LD	C,0			; 0
 	LD	DE,BASE+4FH
 	CALL	DIR_F
 
@@ -3084,6 +3083,23 @@ ENDIF
 
 ENDIF
 ; ??????????????????????????????????????????????
+TSK2:
+	PUSH	HL
+	LD	HL, Rept
+	DEC	(HL)
+	POP	HL
+	JP	NZ, WaitKey
+	PUSH	AF
+	LD	A,ReptVal
+	LD	(Rept), A
+	POP	AF
+
+	DEC	H			; в рег.A=код клав, в рег.H- COUNT
+	JP	NZ,WaitKey		; 39 bytes
+	INC	A
+	JP	Z,SetKbdFlg		; если код FF, то сброс флагов
+	JP	TheSameKey+3
+
 
 
   if	$ ge	1 AND $ le ORGB+1800h
