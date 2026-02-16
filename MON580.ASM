@@ -12,7 +12,10 @@ USE_DMA		EQU	1
 ;MSX		EQU	1
 ;INT_ENABLE	EQU	1
 RAM		EQU	1
+;KBD_EMU		EQU	1
 ;PROFILE		EQU	1
+MOUSE		EQU	1
+MOUSE_POS	EQU	1
 
 IFDEF	RAM
 ORGB		EQU	08000H
@@ -103,6 +106,12 @@ SDBEND	EQU	BASE+41H	; дл€ чтени€: последний адрес данных буфере магнитофона
 SDBLFT	EQU	BASE+43H	; 0, если в буфере чтени€ нет даных (файл весь прочитан)
 EMU_MD	EQU	BASE+44H	; текущий режим эмул€тора (0 - неакт., 1 - запись, 2 - чтение)
 EMUCNL	EQU	BASE+45H	; признак ошибки или отмены операции эмул€ции манитофона
+
+MOUSE_X	EQU	BASE+48h
+MOUSE_Y	EQU	BASE+49h
+LAST_MOUSE_CUR	EQU	BASE+4Ah
+LAST_MOUSE_VAL	EQU	BASE+4Ch
+
 
 ; protected data
 MODE	EQU	BASE+50H	; текущий режим (0-48K, 1-32K, 2-16K)
@@ -211,6 +220,10 @@ ReadHL:
 	IN	A,(VDP)
 	RET
 
+T_SetAddrWriteHL:
+	LD	A,H
+	OR	40H
+	LD	H,A
 T_SetAddrReadHL:
 	DI
 	LD	A,L
@@ -222,41 +235,6 @@ IFDEF INT_ENABLE
 ENDIF
 	RET
 
-CursorSet:
-	PUSH	BC
-	PUSH	HL
-	LD	B,H
-	LD	C,L
-	LD	HL,(SYMADR)
-	PUSH	DE
-	EX	DE,HL
-	LD	HL,(EK_ADR)
-	EX	DE,HL
-	DEC	BC
-	LD	A,C
-	CP	E
-	JP	NZ, WRH01
-	LD	A,B
-	CP	D
-	JP	NZ, WRH01
-WRH03:
-	LD	A,E
-	CP	L
-	JP	NZ,WRH01
-	LD	A,D
-	CP	H
-	JP	Z,WRH02
-WRH01:
-	LD	A,(CURSYM)
-	CALL	WriteHL2
-WRH02:
-	POP	DE
-	POP	HL
-	POP	BC
-	CALL	ReadHL
-	LD	(CURSYM),A
-	LD	A, 255 ; Cursor
-	LD	(SYMADR),HL
 WriteHL2:
 	PUSH	AF
 	DI
@@ -283,7 +261,7 @@ IFDEF INT_ENABLE
 ENDIF
 	LD	A,C
 	OUT	(VDP),A
-IFNDEF	MSX
+IF 0;NDEF	MSX
 	LD	A,0F4h
 	OUT	(VDP),A
 ENDIF
@@ -1359,7 +1337,7 @@ CR2:	CALL	RST_18
 	defb	0dh,0ah,'  ',' ' or 80H
 	RET
 ; ??????????????????????????????????????????????
-
+; ??????????????????????????????????????????????
 	rept	600H
 	if	$ ne SD_MOD_ORG
 		defb	255
@@ -1370,6 +1348,238 @@ CR2:	CALL	RST_18
 	include bootRom.asm
 	include SendRcv.asm
 	.z80
+DIR_F2:
+	CALL	DIR_F
+	PUSH	HL
+	LD	HL,-1
+	LD	(SYMADR), HL
+	POP	HL
+	RET
+
+CursorSet:
+	;PUSH	BC
+	PUSH	HL
+	;LD	B,H
+	;LD	C,L
+	LD	HL,(SYMADR)
+	;PUSH	DE
+	INC	HL
+	LD	A,H
+	OR	L
+	DEC	HL
+	JP	Z, WRH02
+	;EX	DE,HL
+	;LD	HL,(EK_ADR)
+	;EX	DE,HL
+	;DEC	BC
+	;LD	A,C
+	;CP	E
+	;JP	NZ, WRH01
+	;LD	A,B
+	;CP	D
+	;JP	NZ, WRH01
+WRH03:
+IF 0
+	LD	A,E
+	CP	L
+	JP	NZ,WRH01
+	LD	A,D
+	CP	H
+	JP	Z,WRH02
+ENDIF
+WRH01:
+	LD	A,(CURSYM)
+	PUSH	BC
+	LD	BC, 3000h
+	ADD	HL, BC
+	POP	BC
+	CALL	WriteHL2
+WRH02:
+	;POP	DE
+	POP	HL
+	PUSH	HL
+	PUSH	BC
+	LD	BC, 3000h
+	INC	HL
+	LD	(SYMADR),HL
+	ADD	HL,BC
+	CALL	ReadHL
+	LD	(CURSYM),A
+	LD	A, 4Fh; 255 ; Cursor
+	CALL	WriteHL2
+	POP	BC
+	POP	HL
+	RET
+
+
+IFDEF MOUSE
+updateMouse:
+	PUSH	HL
+	PUSH	BC
+	CALL	@UM00
+	POP	BC
+	POP	HL
+	JP	KBD_STATUS
+
+@UM00:
+	LD	HL, (LAST_MOUSE_CUR)
+	LD	A, H
+	OR	L
+	JP	NZ, @UM02
+	LD	HL, 39 + 15 * 256
+	LD	(MOUSE_X), HL
+	CALL	ShowMouse
+@UM02:
+	LD	HL, 0C103H
+	LD	(HL), 80H
+	LD	L,0
+	LD	A, (MOUSE_X)
+	LD	B, (HL)
+	ADD	A, B
+	LD	(MOUSE_X), A
+	INC	HL
+	LD	A, (MOUSE_Y)
+	LD	C, (HL)
+	ADD	A, C
+	LD	(MOUSE_Y), A
+IFDEF	MOUSE_POS
+	LD	A,B
+	CALL	OutHex
+	LD	A, C
+	CALL	OutHex
+	PUSH	HL
+	PUSH	BC
+	LD	HL, STR_BACK
+	CALL	0F818H
+	POP	BC
+	POP	HL
+ENDIF
+	INC	HL
+	LD	A,(HL)
+	AND	4
+	JP	Z, @UM04
+	INC	HL
+	LD	(HL),8AH
+	LD	HL, 39 + 15 * 256
+	LD	(MOUSE_X), HL
+	JP	ShowMouse
+
+@UM04:
+	INC	HL
+	LD	(HL),8AH
+
+	LD	HL, MOUSE_X
+	LD	A, (HL)
+	INC	HL
+	OR	(HL)
+	RLCA
+	JP	C, HideMouse
+
+	LD	A,B
+	OR	C
+	RET	Z
+
+
+	LD	A,(MOUSE_X)
+	CP	80
+	RET	NC
+	LD	A,(MOUSE_Y)
+	CP	30
+	RET	NC
+
+ShowMouse:
+	LD	A, (MOUSE_Y)
+IF 1
+	LD	L, A	; 5
+	LD	H, 0	; 7
+	ADD	HL, HL	; 11
+	ADD	HL, HL	; 11
+	ADD	HL, HL	; 11
+	ADD	HL, HL	; 11
+	LD	C, L	; 5
+	LD	B, H	; 5
+	ADD	HL, HL	; 11
+	ADD	HL, HL	; 11
+	ADD	HL, BC	; 11
+			; = 99 , 26 bytes
+ELSE
+	LD	HL, Mul80Tbl	; 10
+
+	ADD	A, L		; 4
+	LD	L, A		; 5 
+
+	LD	A, (HL)		; 7
+	INC	HL		; 5
+	LD	H, (HL)		; 7
+	LD	L, A		; 5
+ENDIF				; = 33, 69 bytes
+	;XOR	A
+	LD	A,(MOUSE_X)
+	LD	C,A
+	LD	B,30H
+	ADD	HL, BC
+
+	EX	DE, HL
+	LD	HL, (LAST_MOUSE_CUR)
+	EX	DE,HL
+	LD	A, D
+	CP	H
+	JP	NZ,@UM03
+	LD	A,E
+	CP	L
+	RET	Z
+@UM03:	CALL	HideMouse
+	CALL	T_SetAddrReadHL
+	IN	A,(VDP)
+	LD	(LAST_MOUSE_VAL), A
+	LD	(LAST_MOUSE_CUR), HL
+	CALL	T_SETADDRWRITEHL
+	LD	A, 4FH
+	OUT	(VDP), A
+
+	RET
+
+OutHex:
+	OR	A
+	PUSH	BC
+	JP	NZ,@um11
+	LD	C, 18h
+	CALL	09809h
+	CALL	09809h
+	JP	@um12
+@um11:
+	CALL	0F815H
+@um12:
+	LD	C,' '
+	CALL	0F809H
+	POP	BC
+	RET
+
+IF 0
+Mul80Tbl:
+REPT 30
+	DW	($-Mul80Tbl)*40
+ENDM
+ENDIF
+
+HideMouse:
+	EX	DE, HL
+	LD	HL, (LAST_MOUSE_CUR)
+	EX	DE,HL
+	LD	A, D
+	OR	E
+	RET	Z
+
+	EX	DE, HL
+	CALL	T_SETADDRWRITEHL
+	EX	DE, HL
+	LD	A, (LAST_MOUSE_VAL)
+	OUT	(VDP), A
+	RET
+
+str_back:
+	db	8,8,8,8,8,8,0
+ENDIF ; MOUSE
 	rept	600H
 	if	$ ne ORGB+1800H
 		defb	255
@@ -2610,7 +2820,12 @@ if	$ ne RABADR + 663H
 endif
 
 CONIN:	CALL	EMU_CLS
-CONIN2:	CALL	KBD_STATUS
+CONIN2:
+IFDEF	MOUSE
+	CALL	UpdateMouse
+ELSE
+	CALL	KBD_STATUS
+ENDIF
 	OR	A
 	JP	Z,CONIN2
 	XOR	A
@@ -2666,7 +2881,7 @@ IF 0
 	LD	DE, 0F4h
 	CALL	T_FillWord
 ELSE
-IF 1
+IF 0
 	LD	BC, 38*256 + 0
 	LD	DE, 44*256 + 0
 	CALL	Cmd_HMMV
@@ -2696,7 +2911,7 @@ SC01:
 	JP	NZ, SC01
 
 
-	;VDP_SET_REGISTER(0x0f,0); // KBD_STATUS register to read = SR0
+	;VDP_SET_REGISTER(0x0f,0); // register to read = SR0
 	LD	BC,0F00h
 	JP	T_WriteRegValue
 
@@ -2733,6 +2948,7 @@ ELSE
 ENDIF
 ENDIF
 ENDIF
+
 SCR_START	EQU	(SCR_YOFS SHL 8)+SCR_XOFS
 HOME:	LD	DE, SCR_START
 IFNDEF	VDP
@@ -2743,6 +2959,22 @@ ENDIF
 	LD	BC,SCR_WIDTH*SCR_YOFS+SCR_XOFS
 	ADD	HL,BC
 	RET
+WAIT_VDP:
+SC00:
+	;IN	A, (VDP+1)
+	;AND	1
+	;JP	Z, SC00
+	LD	BC,0
+SC01:
+	INC	BC
+	IN	A, (VDP+1)
+	AND	1
+	JP	NZ, SC01
+
+
+	;VDP_SET_REGISTER(0x0f,0); // register to read = SR0
+	LD	BC,0F00h
+	JP	T_WriteRegValue
 
 ; ??????????????????????????????????????????????
 
@@ -2830,7 +3062,7 @@ CLRMON:
 	LD	HL,BASE+2
 	LD	C,0			; 0
 	LD	DE,BASE+4FH
-	CALL	DIR_F
+	CALL	DIR_F2 ; DIR_F 
 
 	LD	HL,BASE-1
 	LD	(RAMTOP),HL

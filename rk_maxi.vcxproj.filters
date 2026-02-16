@@ -143,5 +143,13 @@
     <None Include="KeyTst.asm">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="ftp.bat">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ftp.txt">
+      <Filter>Source Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

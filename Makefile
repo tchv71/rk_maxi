@@ -113,7 +113,7 @@ sdbiosd.rkl: sdbiosd.bin
 	../m80noi/x64/Release/m80noi.exe sdbiosd.prn
 
 sdbiosds.rkl: sdbiosds.bin
-	../makerk/Release/makerk.exe D180 $< $@
+	../makerk/Release/makerk.exe b000 $< $@
 	../m80noi/x64/Release/m80noi.exe sdbiosds.prn
 
 write.rkl: write.bin
@@ -158,3 +158,4 @@ MON580.BIN: MON580.REL
 MON580.rkl: MON580.BIN
 	../makerk/Release/makerk.exe 8000 $< $@
 	../m80noi/x64/Release/m80noi.exe mon580.prn
+	ftp.bat
