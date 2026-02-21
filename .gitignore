@@ -374,3 +374,6 @@ FodyWeavers.xsd
 /monrk.prn.ASM
 /sdbios.NOI
 /sdbios.prn.ASM
+/vdp.h
+/vdp_settext80color.c
+/vdp_settext80x30color.c
