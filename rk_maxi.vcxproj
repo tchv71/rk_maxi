@@ -127,6 +127,9 @@ make all</NMakeReBuildCommandLine>
   <ItemGroup>
     <Text Include="ftp.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="Cursor.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

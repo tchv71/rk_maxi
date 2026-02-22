@@ -424,6 +424,14 @@ font16:
 	LD	DE, tmsFontEnd - tmsFont ; tmsFontBytes
 	CALL	T_WriteBytes
 
+IF 1
+	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS + 800h
+	CALL	T_SetAddrWrite
+	LD	HL, MouseCursor+8
+	LD	DE, 8
+	CALL	T_WriteBytes
+ENDIF
+
 	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS
 	CALL	T_SetAddrWrite
 	LD	HL, MouseCursor
@@ -481,6 +489,8 @@ ELSE
 	DB	31h,			40h ; // set 30 row mode
 	DB	32h,			2   ; // set Position-based tile attributes
 	DB	33h,			1   ; // Max sprites
+	DB	49,			2   ; // Sprite ECM2
+	DB	18h,			20H ; // Use palette 2 for sprites
 ENDIF
 	DB	T_REG_FG_BG_COLOR,	T_DK_BLUE OR (T_WHITE SHL 4)
 	;DB	36h, 3fh
@@ -488,9 +498,14 @@ ENDIF
 	DB	0FFh
 
 MouseCursor:
+IF 0
 	DB	0F0h, 0C0h, 0A0h, 090h, 008h, 004h, 002h, 001h
+ELSE
+	DB	0C0h, 0A0h, 090h, 088h, 090h, 0E8h, 030h, 000h
+	DB	000h, 040h, 060h, 070h, 060h, 010h, 000h, 000h
+ENDIF
 MouseAttr:
-	DB	0, 0D0h, 0, 0Fh
+	DB	0, 0D0h, 0, 6;0Fh
 
 tmsFont:
 IFDEF MSX
