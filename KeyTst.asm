@@ -92,19 +92,7 @@ l02:
 	ANA	L
 	MVI	A, 01Fh
 	JZ	l04
-	MOV	A,H
-	CPI	3
 	MVI	A,0F1h
-	JNZ	l04
-	PUSH	PSW
-	PUSH	B
-	CALL	0f815h
-	MVI	C,8
-	CALL	0F809h
-	CALL	0F809h
-	POP	B
-	POP	PSW
-
 l04:
 	PUSH	PSW
 	MOV	A, E
@@ -148,7 +136,7 @@ Keyboard:
 	DB	10,13
 	DB	"SHIFT",13,10
 	DB	"CTRL", 13,10
-	DB	"RUSlat",13,10
+	DB	"rusLAT",13,10
 	DB	0
 
 	END

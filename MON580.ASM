@@ -424,18 +424,17 @@ font16:
 	LD	DE, tmsFontEnd - tmsFont ; tmsFontBytes
 	CALL	T_WriteBytes
 
-IF 1
-	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS + 800h
-	CALL	T_SetAddrWrite
-	LD	HL, MouseCursor+8
-	LD	DE, 8
-	CALL	T_WriteBytes
-ENDIF
 
 	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS
 	CALL	T_SetAddrWrite
 	LD	HL, MouseCursor
-	LD	DE, 8
+	LD	DE, 8 * 4
+	CALL	T_WriteBytes
+
+	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS + 800h
+	CALL	T_SetAddrWrite
+	LD	HL, McSecondPlane
+	LD	DE, 8 * 4
 	CALL	T_WriteBytes
 
 	LD	BC, T_T80_VRAM_SPR_ATTR_ADDRESS
@@ -485,10 +484,10 @@ IFDEF	MSX
 	DB	T_REG_1,		T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE; OR T_R1_INT_ENABLE
 ELSE
 	DB	T_REG_0,		T_R0_EXT_VDP_DISABLE OR T_R0_MODE_TEXT80 OR T_R0_MODE_TEXT8_80
-	DB	T_REG_1,		T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INTERLEAVE_COLOR
+	DB	T_REG_1,		T_R1_MODE_TEXT OR T_R1_DISP_ACTIVE OR T_R1_INTERLEAVE_COLOR OR T_R1_SPR_16; OR T_R1_SPR_MAG2
 	DB	31h,			40h ; // set 30 row mode
 	DB	32h,			2   ; // set Position-based tile attributes
-	DB	33h,			1   ; // Max sprites
+	DB	33h,			8   ; // Max sprites
 	DB	49,			2   ; // Sprite ECM2
 	DB	18h,			20H ; // Use palette 2 for sprites
 ENDIF
@@ -497,15 +496,6 @@ ENDIF
 	;DB	37h, 0
 	DB	0FFh
 
-MouseCursor:
-IF 0
-	DB	0F0h, 0C0h, 0A0h, 090h, 008h, 004h, 002h, 001h
-ELSE
-	DB	0C0h, 0A0h, 090h, 088h, 090h, 0E8h, 030h, 000h
-	DB	000h, 040h, 060h, 070h, 060h, 010h, 000h, 000h
-ENDIF
-MouseAttr:
-	DB	0, 0D0h, 0, 6;0Fh
 
 tmsFont:
 IFDEF MSX
@@ -1428,7 +1418,9 @@ WRH02:
 	RET
 
 IFDEF MOUSE
-MOUSE_CENTER	EQU	127 + (15*8)*256
+MOUSE_MAX_X	EQU	640/3
+MOUSE_MAX_Y	EQU	30*8
+MOUSE_CENTER	EQU	MOUSE_MAX_X / 2 + (15*8)*256
 
 updateMouse:
 	PUSH	HL
@@ -1448,17 +1440,12 @@ updateMouse:
 	LD	HL, 0C103H
 	LD	(HL), 80H
 	LD	L,0
-IF 0
+
 	LD	B, (HL)
 	LD	A, (MOUSE_X)
-ELSE
-	LD	A, (HL)
-	CALL	Div8
-	LD	B, A
-	LD	A, (MOUSE_X)
-ENDIF
 	ADD	A, B
 	JP	P, @UM10
+
 	LD	E, A
 	LD	A, B
 	OR	A
@@ -1470,21 +1457,18 @@ ENDIF
 	JP	M,@UM10
 	XOR	A
 @UM10:
+	CP	MOUSE_MAX_X
+	JP	C, $+5
+	LD	A, MOUSE_MAX_X
 	LD	(MOUSE_X), A
 
 	INC	HL
-IF 0
+
 	LD	C, (HL)
-	LD	A, (MOUSE_X)
-	ADD	A, C
-ELSE
-	LD	A, (HL)
-	CALL	Div8
-	LD	C, A
 	LD	A, (MOUSE_Y)
 	ADD	A, C
-ENDIF
 	JP	P, @UM21
+
 	LD	E, A
 	LD	A, C
 	OR	A
@@ -1496,6 +1480,9 @@ ENDIF
 	JP	M,@UM21
 	XOR	A
 @UM21:
+	CP	MOUSE_MAX_Y
+	JP	C, $+5
+	LD	A, MOUSE_MAX_Y
 	LD	(MOUSE_Y), A
 IFDEF	MOUSE_POS
 	;PUSH	BC
@@ -1600,35 +1587,36 @@ ENDIF				; = 33, 69 bytes
 	RET
 ENDIF
 
-Div8:	RET
-	OR	A
-	JP	M, @UM13
-	RRA
-	RRA
-	RRA
-	AND	11111b
-	RET
+;Div8:	RET
+;	OR	A
+;	JP	M, @UM13
+;	RRA
+;	RRA
+;	RRA
+;	AND	11111b
+;	RET
+;
+;@UM13:	RRA
+;	RRA
+;	RRA
+;	OR	11100000b
+;	RET
 
-@UM13:	RRA
-	RRA
-	RRA
-	OR	11100000b
-	RET
-OutHex:
-	OR	A
-	PUSH	BC
-	JP	NZ,@um11
-	LD	C, 18h
-	CALL	09809h
-	CALL	09809h
-	JP	@um12
-@um11:
-	CALL	09815H
-@um12:
-	LD	C,' '
-	CALL	09809H
-	POP	BC
-	RET
+;OutHex:
+;	OR	A
+;	PUSH	BC
+;	JP	NZ,@um11
+;	LD	C, 18h
+;	CALL	09809h
+;	CALL	09809h
+;	JP	@um12
+;@um11:
+;	CALL	09815H
+;@um12:
+;	LD	C,' '
+;	CALL	09809H
+;	POP	BC
+;	RET
 
 IF 0
 Mul80Tbl:
@@ -1655,6 +1643,22 @@ HideMouse:
 str_back:
 	db	8,8,8,8,8,8,0
 ENDIF ; MOUSE
+MouseCursor:
+IF 0
+	DB	0F0h, 0C0h, 0A0h, 090h, 008h, 004h, 002h, 001h
+ELSE
+	DB	0C0h, 0A0h, 090h, 088h, 090h, 0E8h, 030h, 000h
+	DB	0C0h, 0A0h, 090h, 088h, 090h, 0E8h, 030h, 000h
+	DB	0C0h, 0A0h, 090h, 088h, 090h, 0E8h, 030h, 000h
+	DB	0C0h, 0A0h, 090h, 088h, 090h, 0E8h, 030h, 000h
+McSecondPlane:
+	DB	000h, 040h, 060h, 070h, 060h, 010h, 000h, 000h
+	DB	000h, 040h, 060h, 070h, 060h, 010h, 000h, 000h
+	DB	000h, 040h, 060h, 070h, 060h, 010h, 000h, 000h
+	DB	000h, 040h, 060h, 070h, 060h, 010h, 000h, 000h
+ENDIF
+MouseAttr:
+	DB	0, 0D0h, 0, 6;0Fh
 
 ESC2_NEXT:
 	SUB	'a'
