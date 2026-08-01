@@ -1,7 +1,7 @@
 M80PATH=D:/M80
 PORT=COM2:
 
-.SUFFIXES: .ASM .REL .BIN
+.SUFFIXES: .ASM .REL .BIN .COM
 
 init1.REL: init1.asm
 	$(M80PATH)/M80 '=$< /I/L'
@@ -15,7 +15,7 @@ clean:
 	del *.BIN
 	del *.NoiCtx
 
-all: init1.rkl init2.BIN init3.rkl RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl sprite.rkl rk60k.rkl bootRom.rkl MON580.rkl sdbiosd.rkl bootd.rkl bootds.rkl sdbiosds.rkl init2.rkl init2a.rkl GetKey.rkl KeyTst.rkl
+all: init1.rkl init2.BIN init3.rkl RomCopy.BIN apogee.rkl port.rkl memtest.rkl SDDMA.rkl boot.rkl sdbios.rkl write.rkl sprite.rkl rk60k.rkl bootRom.rkl MON580.rkl sdbiosd.rkl bootd.rkl bootds.rkl sdbiosds.rkl init2.rkl init2a.rkl GetKey.rkl KeyTst.rkl tay.rkl msx1.rkl crc32.com
 
 init1.rkl: init1.BIN
 
@@ -42,6 +42,12 @@ boot.REL: boot.asm
 bootd.REL: bootd.asm
 bootds.REL: bootds.asm
 
+crc32.rel: crc32.asm
+	$(M80PATH)/M80 '=$< /I/L'
+
+crc32.com: crc32.rel
+	$(M80PATH)/L80 /P:100,$<,$@/N/Y/E
+
 SDDMA.BIN: SDDMA.REL
 
 sdbios.REL: sdbios.asm DmaIo.asm
@@ -58,6 +64,14 @@ write.REL: write.asm
 
 write.BIN: write.rel
 
+tay.REL: tay.asm 
+
+tay.BIN: tay.rel
+
+tay.rkl: tay.BIN
+	../makerk/Release/makerk.exe 100 $< $@
+
+
 port.rkl: port.BIN
 	../makerk/Release/makerk.exe 100 $< $@
 
@@ -68,10 +82,19 @@ port.rkl: port.BIN
 .REL.BIN:
 	$(M80PATH)/L80 /P:100,$<,$@/N/Y/E
 
+.REL.COM:
+	$(M80PATH)/L80 /P:100,$<,$@/N/Y/E
+
 apogee2.BIN: apogey.rom apogee.BIN
 	copy /B apogee.BIN+apogey.rom apogee2.BIN
 
 apogee.rkl: apogee2.BIN
+	../makerk/Release/makerk.exe 100 $< $@
+
+msx12.BIN: msx.rom msx1.BIN
+	copy /B msx1.BIN+msx.rom msx12.BIN
+
+msx1.rkl: msx12.BIN
 	../makerk/Release/makerk.exe 100 $< $@
 
 rk60k2.BIN: rk60k.rom rk60k.BIN
@@ -113,7 +136,7 @@ sdbiosd.rkl: sdbiosd.bin
 	../m80noi/x64/Release/m80noi.exe sdbiosd.prn
 
 sdbiosds.rkl: sdbiosds.bin
-	../makerk/Release/makerk.exe b000 $< $@
+	../makerk/Release/makerk.exe D180 $< $@
 	../m80noi/x64/Release/m80noi.exe sdbiosds.prn
 
 write.rkl: write.bin

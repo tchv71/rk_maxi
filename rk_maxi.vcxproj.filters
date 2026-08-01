@@ -146,6 +146,18 @@
     <None Include="ftp.bat">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="tay.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="msx1.asm">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="DUMP.ASM">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="crc32.ASM">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ftp.txt">

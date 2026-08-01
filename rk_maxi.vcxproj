@@ -88,7 +88,9 @@ make all</NMakeReBuildCommandLine>
     <None Include="bootd.asm" />
     <None Include="bootds.asm" />
     <None Include="bootRom.asm" />
+    <None Include="crc32.ASM" />
     <None Include="DmaIo.asm" />
+    <None Include="DUMP.ASM" />
     <None Include="F8X16.asm" />
     <None Include="F8X16EN.asm" />
     <None Include="fMsx.asm" />
@@ -106,6 +108,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="MON580.ASM" />
     <None Include="MON580.PRN" />
     <None Include="MonRKRom.asm" />
+    <None Include="msx1.asm" />
     <None Include="port.asm" />
     <None Include="rk60k.asm" />
     <None Include="RomCopy.asm" />
@@ -117,6 +120,7 @@ make all</NMakeReBuildCommandLine>
     <None Include="SDDMA.ASM" />
     <None Include="SendRcv.asm" />
     <None Include="sprite.asm" />
+    <None Include="tay.asm" />
     <None Include="tms.asm" />
     <None Include="tmsfont.asm" />
     <None Include="TMS_DEF.ASM" />
