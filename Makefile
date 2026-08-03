@@ -42,12 +42,6 @@ boot.REL: boot.asm
 bootd.REL: bootd.asm
 bootds.REL: bootds.asm
 
-crc32.rel: crc32.asm
-	$(M80PATH)/M80 '=$< /I/L'
-
-crc32.com: crc32.rel
-	$(M80PATH)/L80 /P:100,$<,$@/N/Y/E
-
 SDDMA.BIN: SDDMA.REL
 
 sdbios.REL: sdbios.asm DmaIo.asm
