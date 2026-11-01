@@ -168,7 +168,9 @@ LOOP:
 ;14	- 0C500h - VDP TMS9918A
 ;14	- 0CA00h
 ;15	- 0F700h - RK60K Ports
-MAP:	DB	1,5,3fh,5,40h,15h,40h,13
+MAP:
+	;DB	1,5,3fh,5,40h,15h,40h,13
+	DB	1,0dh,3fh,0dh,40h,1dh,40h,0dh
 	DB	1,2  ; 0C000h - ВГ75
 	DB	1,9  ; 0C100h - SD_CNTR - контроллер SD-карточки
 IFDEF KBD_EMU
@@ -184,7 +186,7 @@ ENDIF
 	DB	2,14 ; 0CA00h - VDP TMS9918A
 	DB	2,6  ; 0CC00h - ВИ53 - 1
 	DB	2,11 ; 0CE00h - ТМ9  (Palmira Control Byte)
-	DB	8,13+10h,8,10,30,4,0
+	DB	8,1dh,8,10,30,4,0
 
 APOGEE:
 	DB	"APOGEE.RKL"

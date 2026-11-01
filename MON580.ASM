@@ -18,12 +18,13 @@ MOUSE		EQU	1
 ;MOUSE_POS	EQU	1
 
 IFDEF	RAM
+	BASE    EQU	0B500H		; служебные €чейки
 ORGB		EQU	08000H
 ELSE
+	BASE    EQU	0D700H		; служебные €чейки
 ORGB		EQU	0E000H
 ENDIF
 
-	BASE    EQU	0D700H		; служебные €чейки
 	BASE_W	EQU	BASE-100h
 IFNDEF VDP
 	SA48	EQU	0B6D0H		; 76D0 начало экранной области в режиме 48K
@@ -56,7 +57,7 @@ TM9	EQU	0CE00H
 VT_57   EQU	0C600H
 VI_53	EQU	0CC00H
 
-SG	EQU	0D800H
+SG	EQU	0D800H		; Symbol Generator
 
 K_ORIG	EQU	0		; если не 0, то оригинальный курсор
 
@@ -261,7 +262,7 @@ IFDEF INT_ENABLE
 ENDIF
 	LD	A,C
 	OUT	(VDP),A
-IF 0;NDEF	MSX
+IFNDEF	MSX
 	LD	A,0F4h
 	OUT	(VDP),A
 ENDIF
@@ -1379,13 +1380,18 @@ DIR_F2:
 	POP	HL
 	RET
 
+IFDEF	VDP
 CursorSet:
 	LD	A, (CURSOFF_F)
-	OR	A
+	INC	A
+	JP	NZ,CS01
+	LD	(CURSOFF_F), A
+	RET
+CS01:	DEC	A
 	RET	NZ
-	CALL	CursorHide
 	PUSH	HL
 	PUSH	BC
+	CALL	CursorHide
 	LD	BC, 3000h
 	;INC	HL
 	LD	(SYMADR),HL
@@ -1416,6 +1422,11 @@ CursorHide:
 WRH02:
 	POP	HL
 	RET
+ELSE
+CursorSet:
+CursorHide:
+	RET
+ENDIF
 
 IFDEF MOUSE
 MOUSE_MAX_X	EQU	640/3
@@ -3040,9 +3051,15 @@ ELSE
 
 	LD	BC,0154h
 	CALL	T_WriteRegValue
+
 ENDIF
 ENDIF
 ENDIF
+	LD	HL,CURSOFF_F
+	LD	A,(HL)
+	OR	A
+	JP	NZ,HOME
+	DEC	(HL)
 
 SCR_START	EQU	(SCR_YOFS SHL 8)+SCR_XOFS
 HOME:	LD	DE, SCR_START
@@ -3162,9 +3179,13 @@ CLRMON:
 	LD	HL,BASE-1
 	LD	(RAMTOP),HL
 
+IFNDEF VDP
 	LD	HL,(SCRBEG)
 	LD	L,0FFH
 	DEC	H
+ELSE
+	LD	HL, 0BFFFh
+ENDIF
 	LD	(RAMTOP),HL
 
 
@@ -3183,7 +3204,7 @@ CLRMON:
 	CALL	DIR_T
 
 	CALL	RST_18
-TITR:	defb	1FH,'sewernaq palxmira 1.','1' or 80H
+TITR:	defb	1FH,'sewernaq palxmira 1.3', 0
 
 	CALL	PUSK_VG
 
@@ -3279,14 +3300,18 @@ ELSE
 IFDEF VDP_TEXT_SCROLL
 IF 1
 	PUSH	HL
+	CALL	CursorHide
+IFDEF MSX
 	LD	HL,(SYMADR)
 	LD	A,(CURSYM)
 	CALL	WriteHL2
+ENDIF
 	LD	HL,ScrollRegs
 	CALL	T_SetRegs
 	POP	HL
 	;while (VDPST & 1);    // wait for 9938 KBD_STATUS to be idle
-	JP	WAIT_VDP
+	CALL	WAIT_VDP
+	JP	CursorSet
 
 ScrollRegs:
 	DB	34,1

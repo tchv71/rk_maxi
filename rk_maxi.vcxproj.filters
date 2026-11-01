@@ -155,9 +155,6 @@
     <None Include="DUMP.ASM">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="crc32.ASM">
-      <Filter>Source Files</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ftp.txt">

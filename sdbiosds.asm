@@ -83,7 +83,7 @@ PrintVer:
 	
 	; ѕолучаем версию набора команд и текст
 	;LXI	D, VER_BUF
-	MVI	E, 17
+	MVI	E, 16
 	LXI	B, VER_BUF
 	CALL	RecvBlock2
 
@@ -100,7 +100,7 @@ aHello:		db 13,10,"SD BIOS V1.1",13,10
 aSdController:	db "SD DMA CONTROLLER ",0
 aCrLf:		db 13,10,0
 aErrorShellRk:	db "fajl ne najden "
-aShellRk:	db "BOOT/SHELL.RK",0
+aShellRk:	db "BOOT/SHELL2.RK",0
 		db "(c) 04-05-2014 vinxru, 2024-5 (c) tchv"
 
 ;  од ниже будет затерт ком строкой и собственым именем
@@ -446,10 +446,10 @@ StartCommand:
 	PUSH	B
 	PUSH	H
 	PUSH	PSW
-
+	MVI	C, 0
 StartCommand1:
 	; SendByte mode (release the bus) and init HL
-	CALL	  SwitchRecv
+	;CALL	  SwitchRecv
 
 	; If there is synchronization, controller will answer STA_START
 	CALL	RecvByte
@@ -464,7 +464,7 @@ StartCommand1:
 	JNZ	StartCommandErr2
 
 	; Switch to send mode
-	CALL	SwitchSend
+	;CALL	SwitchSend
 
 	POP	PSW
 	POP	H
@@ -473,6 +473,8 @@ StartCommand1:
 	; Transmit command code
 	JMP	SendByte
 StartCommandErr2:
+	DCR	C
+	JNZ	StartCommand1
 	POP	B
 	POP	H
 	POP	B

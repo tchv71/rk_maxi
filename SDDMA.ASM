@@ -1,10 +1,15 @@
 	 .phase 80H
 CHANNEL0 EQU 1
+STA_START	EQU 040h ; MC switched to command receive mode
+STA_WAIT	EQU 041h ; MC is executing command
+STA_OK_DISK	EQU 042h ; The drive is working, MC is ready to receive command
 
+	CALL	StartTest
+	JNZ	Err
 	LXI D,1200h
-	LXI B,4002h
+	LXI B,4080h
 	CALL SET_DMAW
-	JMP 0F86CH
+	;JMP 0F86CH
 	LXI D,1200h
 	LXI B,8080h
 	CALL SET_DMAW
@@ -13,6 +18,50 @@ CHANNEL0 EQU 1
 	LXI B,4080h
 	CALL SET_DMAW
 	JMP  0F86Ch
+Err:	LXI	H,ErrTxt
+	JMP	0F818h
+
+ErrTxt:	DB	'SD ERROR',13,10,0
+
+StartTest:
+	CALL	RecvByte
+	CPI	STA_START
+	RNZ
+	CALL	WaitForReady
+	CPI	STA_OK_DISK
+	RNZ
+	MVI	A,99
+	CALL	SendByte
+	XRA	A
+	RET
+
+WaitForReady:
+	;Rst	1
+	CALL	RecvByte
+	CPI	STA_WAIT
+	JZ	WaitForReady
+	RET
+
+; Receive byte into À
+RecvByte:
+	PUSH	D
+	PUSH	B
+	LXI	D,BUF
+	LXI	B,4001h
+	;RST	3;
+	CALL	SET_DMAW
+	LDAX	D
+	POP	B
+	POP	D
+	RET
+
+SendByte:
+	LXI	D,BUF
+	STAX	D
+	LXI	B,8001H
+	;RST	3;
+	JMP	SET_DMAW
+
 
 	; HL - addr
 	; DE - size
@@ -142,5 +191,6 @@ ENDIF
 	POP	H
 	RET
 
+BUF:	DS	1
 	 END
 

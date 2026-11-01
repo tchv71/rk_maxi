@@ -503,9 +503,9 @@ StartCommand:
 	PUSH	B
 	PUSH	H
 	PUSH	PSW
-IFNDEF USE_DMA
+;IFNDEF USE_DMA
 	MVI	C, 0
-ENDIF
+;ENDIF
 
 StartCommand1:
 IFNDEF USE_DMA
@@ -529,9 +529,9 @@ ENDIF
 	; If there is synchronization, controller will answer STA_START
 	CALL	RecvByte
 	CPI	STA_START
-IFDEF USE_DMA
-	JNZ	StartCommandErr2
-ELSE
+;IFDEF USE_DMA
+;	JNZ	StartCommandErr2
+;ELSE
 	JZ	StartCommand2
 
 	; Пауза. И за одно пропускаем 256 байт (в сумме будет 
@@ -560,7 +560,7 @@ StartCommandErr2:
 ; There is synchronization with controller.Controller should answer STA_OK_DISK
 
 StartCommand2:
-ENDIF
+;ENDIF
 	; Reply
 	CALL	WaitForReady
 	CPI	STA_OK_DISK
@@ -577,15 +577,7 @@ ENDIF
 
 	; Transmit command code
 	JMP	SendByte
-IFDEF USE_DMA
-StartCommandErr2:
-	POP	B
-	POP	H
-	POP	B
-	POP	B
-	RET
-ELSE
-
+IFNDEF USE_DMA
 ;----------------------------------------------------------------------------
 ; Переключиться в режим передачи
 

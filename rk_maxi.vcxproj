@@ -88,7 +88,6 @@ make all</NMakeReBuildCommandLine>
     <None Include="bootd.asm" />
     <None Include="bootds.asm" />
     <None Include="bootRom.asm" />
-    <None Include="crc32.ASM" />
     <None Include="DmaIo.asm" />
     <None Include="DUMP.ASM" />
     <None Include="F8X16.asm" />
