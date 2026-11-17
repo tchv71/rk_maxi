@@ -11,7 +11,7 @@ VDP_TEXT_SCROLL	EQU	1
 USE_DMA		EQU	1
 ;MSX		EQU	1
 ;INT_ENABLE	EQU	1
-RAM		EQU	1
+;RAM		EQU	1
 ;KBD_EMU		EQU	1
 ;PROFILE		EQU	1
 MOUSE		EQU	1
@@ -426,23 +426,23 @@ font16:
 	CALL	T_WriteBytes
 
 
-	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS
-	CALL	T_SetAddrWrite
-	LD	HL, MouseCursor
-	LD	DE, 8 * 4
-	CALL	T_WriteBytes
-
-	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS + 800h
-	CALL	T_SetAddrWrite
-	LD	HL, McSecondPlane
-	LD	DE, 8 * 4
-	CALL	T_WriteBytes
-
-	LD	BC, T_T80_VRAM_SPR_ATTR_ADDRESS
-	CALL	T_SetAddrWrite
-	LD	HL, MouseAttr
-	LD	DE, 4
-	CALL	T_WriteBytes
+;	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS
+;	CALL	T_SetAddrWrite
+;	LD	HL, MouseCursor
+;	LD	DE, 8 * 4
+;	CALL	T_WriteBytes
+;
+;	LD	BC, T_T80_VRAM_SPR_PATT_ADDRESS + 800h
+;	CALL	T_SetAddrWrite
+;	LD	HL, McSecondPlane
+;	LD	DE, 8 * 4
+;	CALL	T_WriteBytes
+;
+;	LD	BC, T_T80_VRAM_SPR_ATTR_ADDRESS
+;	CALL	T_SetAddrWrite
+;	LD	HL, MouseAttr
+;	LD	DE, 4
+;	CALL	T_WriteBytes
 
 ; Cursor pattern
 IFNDEF	MSX
@@ -489,8 +489,8 @@ ELSE
 	DB	31h,			40h ; // set 30 row mode
 	DB	32h,			2   ; // set Position-based tile attributes
 	DB	33h,			8   ; // Max sprites
-	DB	49,			2   ; // Sprite ECM2
-	DB	18h,			20H ; // Use palette 2 for sprites
+	;DB	49,			2   ; // Sprite ECM2
+	;DB	18h,			20H ; // Use palette 2 for sprites
 ENDIF
 	DB	T_REG_FG_BG_COLOR,	T_DK_BLUE OR (T_WHITE SHL 4)
 	;DB	36h, 3fh
@@ -1361,6 +1361,49 @@ CR2:	CALL	RST_18
 	defb	0dh,0ah,'  ',' ' or 80H
 	RET
 ; ??????????????????????????????????????????????
+	.8080
+;----------------------------------------------------------------------------
+; Send byte from A.
+SendByte:
+IFDEF USE_DMA
+	PUSH	D
+	PUSH	B
+	LXI	D,SDBUF2
+	STAX	D
+	LXI	B,8001H
+	;RST	3;
+SendDma:
+	CALL	SET_DMAW
+	POP	B
+	POP	D
+	XRA	A
+	RET
+ELSE
+	@out	USER_PORT
+ENDIF
+;----------------------------------------------------------------------------
+; Receive byte into À
+
+RecvByte:
+IFDEF USE_DMA
+	PUSH	D
+	PUSH	B
+	LXI	D,SDBUF2
+	LXI	B,4001h
+	;RST	3;
+	CALL	SET_DMAW
+	LDAX	D
+	POP	B
+	POP	D
+ELSE
+	MVI	A, 20h
+	@out	USER_PORT+1
+	XRA	A
+	@out	USER_PORT+1
+	@in	USER_PORT
+ENDIF
+	RET
+	.Z80
 ; ??????????????????????????????????????????????
 	rept	600H
 	if	$ ne SD_MOD_ORG

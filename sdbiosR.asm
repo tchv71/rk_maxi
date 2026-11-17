@@ -773,47 +773,6 @@ RecvBuf0:
 
 	JMP	RecvBuf0
 ENDIF
-;----------------------------------------------------------------------------
-; Send byte from A.
-SendByte:
-IFDEF USE_DMA
-	PUSH	D
-	PUSH	B
-	LXI	D,SDBUF2
-	STAX	D
-	LXI	B,8001H
-	;RST	3;
-SendDma:
-	CALL	SET_DMAW
-	POP	B
-	POP	D
-	XRA	A
-	RET
-ELSE
-	@out	USER_PORT
-ENDIF
-;----------------------------------------------------------------------------
-; Receive byte into À
-
-RecvByte:
-IFDEF USE_DMA
-	PUSH	D
-	PUSH	B
-	LXI	D,SDBUF2
-	LXI	B,4001h
-	;RST	3;
-	CALL	SET_DMAW
-	LDAX	D
-	POP	B
-	POP	D
-ELSE
-	MVI	A, 20h
-	@out	USER_PORT+1
-	XRA	A
-	@out	USER_PORT+1
-	@in	USER_PORT
-ENDIF
-	RET
 
 IFDEF USE_DMA
 
